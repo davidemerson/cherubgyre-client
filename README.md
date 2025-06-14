@@ -1,6 +1,6 @@
 # cherubgyre
 
-A new Flutter project.
+A cherugbyre client developed in flutter for iOS and android
 
 ## Getting Started
 
