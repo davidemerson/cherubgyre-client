@@ -11,6 +11,7 @@ class RegisterViewModel extends ChangeNotifier {
   String? _confirmNormalPin;
   String? _duressPin;
   String? _confirmDuressPin;
+  bool _acceptedPrivacyPolicy = false;
   Map<String, dynamic>? _userData;
 
   // Registration step state
@@ -40,6 +41,7 @@ class RegisterViewModel extends ChangeNotifier {
   String? get confirmNormalPin => _confirmNormalPin;
   String? get duressPin => _duressPin;
   String? get confirmDuressPin => _confirmDuressPin;
+  bool get acceptedPrivacyPolicy => _acceptedPrivacyPolicy;
   Map<String, dynamic>? get userData => _userData;
 
   void setInviteCode(String code) {
@@ -70,6 +72,17 @@ class RegisterViewModel extends ChangeNotifier {
   void setConfirmDuressPin(String pin) {
     _confirmDuressPin = pin;
     _error = null;
+    notifyListeners();
+  }
+
+  void setPrivacyPolicyAccepted(bool accepted) {
+    _acceptedPrivacyPolicy = accepted;
+    _error = null;
+    notifyListeners();
+  }
+
+  void setError(String? error) {
+    _error = error;
     notifyListeners();
   }
 
@@ -134,6 +147,13 @@ class RegisterViewModel extends ChangeNotifier {
     return null;
   }
 
+  String? validatePrivacyPolicy() {
+    if (!_acceptedPrivacyPolicy) {
+      return 'You must accept the Privacy Policy and Terms & Conditions to continue';
+    }
+    return null;
+  }
+
   Future<bool> verifyInviteCode() async {
     final validationError = validateInviteCode();
     if (validationError != null) {
@@ -173,8 +193,10 @@ class RegisterViewModel extends ChangeNotifier {
   Future<bool> register() async {
     final pinError = validateNormalPin();
     final duressError = validateDuressPin();
-    if (pinError != null || duressError != null) {
-      _error = pinError ?? duressError;
+    final privacyError = validatePrivacyPolicy();
+    
+    if (pinError != null || duressError != null || privacyError != null) {
+      _error = pinError ?? duressError ?? privacyError;
       notifyListeners();
       return false;
     }

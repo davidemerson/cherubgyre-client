@@ -45,6 +45,66 @@ class ApiClient {
     }
   }
 
+  // Login method
+  Future<Map<String, dynamic>> login({required String username, required String pin}) async {
+    try {
+      final response = await post('/auth/login', data: {
+        'username': username,
+        'pin': pin,
+      });
+      
+      return {
+        'success': true,
+        'token': response.data['token'],
+        'user': response.data['user'],
+      };
+    } on Exception catch (e) {
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+  // Verify invite code method
+  Future<bool> verifyInviteCode(String inviteCode) async {
+    try {
+      final response = await post('/auth/verify-invite', data: {
+        'inviteCode': inviteCode,
+      });
+      
+      return response.data['valid'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Register method
+  Future<Map<String, dynamic>> register({
+    required String inviteCode,
+    required String normalPin,
+    required String duressPin,
+  }) async {
+    try {
+      final response = await post('/auth/register', data: {
+        'inviteCode': inviteCode,
+        'normalPin': normalPin,
+        'duressPin': duressPin,
+      });
+      
+      return {
+        'success': true,
+        'token': response.data['token'],
+        'user': response.data['user'],
+      };
+    } on Exception catch (e) {
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
   Exception _handleError(DioException error) {
     switch (error.type) {
       case DioExceptionType.connectionTimeout:

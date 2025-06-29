@@ -9,10 +9,9 @@ class RegisterService {
 
   Future<bool> verifyInviteCode(String code) async {
     try {
-      final response = await _apiClient.get('/invites/verify', queryParameters: {'code': code});
-      return response.data['valid'] ?? false;
+      return await _apiClient.verifyInviteCode(code);
     } catch (e) {
-      rethrow;
+      return false;
     }
   }
 
@@ -22,23 +21,22 @@ class RegisterService {
     required String duressPin,
   }) async {
     try {
-      final response = await _apiClient.post(
-        '/users/register',
-        data: {
-          'invite_code': inviteCode,
-          'normal_pin': normalPin,
-          'duress_pin': duressPin,
-        },
+      final response = await _apiClient.register(
+        inviteCode: inviteCode,
+        normalPin: normalPin,
+        duressPin: duressPin,
       );
 
-      final userData = response.data;
-      
-      // Store sensitive data securely
-      await _storage.write(key: 'userId', value: userData['id']);
-      await _storage.write(key: 'normalPin', value: normalPin);
-      await _storage.write(key: 'duressPin', value: duressPin);
-
-      return userData;
+      if (response['success'] == true) {
+        // Store authentication token and user data securely
+        await _storage.write(key: 'accessToken', value: response['token']);
+        await _storage.write(key: 'normalPin', value: normalPin);
+        await _storage.write(key: 'duressPin', value: duressPin);
+        
+        return response['user'] ?? {};
+      } else {
+        throw Exception(response['message'] ?? 'Registration failed');
+      }
     } catch (e) {
       rethrow;
     }

@@ -1,5 +1,175 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+# Flutter Provider + MVVM App Development Rules
+
+---
+
+## Architecture and State Management
+
+1. Stateless UI by Default**
+
+   * Use `StatelessWidget` by default. Use `StatefulWidget` only for local, view-specific state.
+   * UI widgets must **not** manage business logic or application state directly.
+
+2. **Scoped Providers**
+
+   * Wrap only the smallest necessary part of the widget tree with a Provider.
+   * Use global providers only for genuinely app-wide state (e.g., authentication, theme).
+   * Feature/screen-specific providers must be scoped only to those features/screens.
+
+3. **Provider Types**
+
+   * Use `ChangeNotifierProvider` for mutable, observable ViewModels.
+   * Use `Provider` for immutable, injected dependencies.
+   * Use `Provider.value` only with pre-existing objects that don’t require disposal.
+
+4. **Project-wide Impact**
+
+   * **Every new functionality or implementation decision must consider the overall project architecture and scope.**
+   * All architectural choices must be consistent with the existing structure, and should not introduce unnecessary global state or tight coupling.
+
+5. **MVVM Pattern**
+
+   * **Model:** Pure data classes, no business/UI logic.
+   * **View:** Stateless widgets, focused only on UI.
+   * **ViewModel:** Contains all business logic and state for its view.
+
+6. **No Unnecessary Global State**
+
+   * Never put feature- or session-specific state in global providers.
+
+7. **Optimization**
+
+   * Use `context.read` for one-off actions (not for values that trigger rebuilds).
+   * Use `context.select` or `Selector` for fine-grained listening.
+   * Place `Consumer`/`Selector` as close as possible to widgets needing rebuild.
+
+8. **Provider Disposal**
+
+   * Ensure correct disposal of ViewModels/providers, tied to their widget’s lifecycle.
+
+9. **No Cross-Widget BuildContext Access**
+
+   * Use Provider for dependencies, not widget constructors, except for local state.
+
+10. **Testing**
+
+    * All ViewModels/providers should be independently testable.
+
+---
+
+## Responsiveness and Platform Support
+
+11. **Responsive Sizing Using MediaQuery**
+
+* At the start of each screen, set variables for `mediaQueryWidth` and `mediaQueryHeight` from `MediaQuery.of(context).size`.
+* All sizes, paddings, margins, spacings, and font sizes must be calculated as a percentage of these values (not hardcoded or static).
+* Example:
+
+  ```dart
+  final mediaQueryWidth = MediaQuery.of(context).size.width;
+  final mediaQueryHeight = MediaQuery.of(context).size.height;
+  // Usage:
+  SizedBox(height: mediaQueryHeight * 0.02) // 2% of screen height
+  Padding(padding: EdgeInsets.symmetric(horizontal: mediaQueryWidth * 0.05)) // 5% of screen width
+  ```
+* This approach ensures full responsiveness across all device sizes.
+
+12. **Cross-Platform Compatibility**
+
+* All developed features and UI must function **completely** on both iOS and Android.
+* All screens must be **responsive** and display correctly on devices with varying screen sizes, including tablets and small phones.
+
+---
+
+## Code Quality and Maintainability
+
+13. **Minimal Third-Party Packages**
+
+* Avoid reliance on third-party packages unless absolutely necessary (e.g., core Flutter plugins, proven solutions).
+* Justify any third-party package use and document it, as such dependencies can cause issues with future updates, maintenance, and security.
+
+14. **Readable and Maintainable Code**
+
+* Code must be clear, well-structured, and self-explanatory.
+* Use meaningful names, clear organization, and adequate comments where needed.
+* Code should be easy for any developer to understand, modify, and extend.
+
+15. **Future-Proofing**
+
+* App structure must allow for **easy updates** and adaptation to upcoming functionalities.
+* New features must fit into the MVVM and Provider architecture without breaking existing logic or causing tight coupling.
+
+---
+
+## Example Project Structure
+
+```
+lib/
+├── main.dart
+├── app.dart                      // App entry & global providers
+│
+├── models/                       // Data classes only (no logic)
+│   └── user.dart
+│
+├── view_models/                  // One ViewModel per feature/screen
+│   └── home_view_model.dart
+│   └── login_view_model.dart
+│
+├── views/                        // Screens/pages
+│   └── home_screen.dart
+│   └── login_screen.dart
+│
+├── widgets/                      // Reusable widgets (stateless)
+│   └── custom_button.dart
+│
+├── services/                     // API, DB, storage, platform logic
+│   └── user_service.dart
+│
+├── utils/                        // Helpers, constants
+│   └── responsive.dart           // e.g., helpers for responsive design
+│
+└── routes/                       // Navigation setup (if complex)
+    └── app_routes.dart
+```
+
+---
+
+## Sample Code Snippet for Responsive Sizing
+
+```dart
+// In any screen
+class HomeScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final mediaQueryWidth = MediaQuery.of(context).size.width;
+    final mediaQueryHeight = MediaQuery.of(context).size.height;
+
+    return Scaffold(
+      body: Padding(
+        padding: EdgeInsets.symmetric(horizontal: mediaQueryWidth * 0.05),
+        child: Column(
+          children: [
+            SizedBox(height: mediaQueryHeight * 0.04),
+            Text(
+              'Welcome',
+              style: TextStyle(fontSize: mediaQueryWidth * 0.07),
+            ),
+            SizedBox(height: mediaQueryHeight * 0.02),
+            // ...
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+---
+
+## Summary Statement
+
+> Every design and implementation choice must consider the entire project’s scope and future growth. Only add Providers where absolutely needed and minimize their scope. Use MediaQuery-based sizing for true responsiveness. Minimize third-party dependencies. The app must be fully functional on both iOS and Android, and code must be maintainable and adaptable for future features.
