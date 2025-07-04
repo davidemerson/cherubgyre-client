@@ -3,148 +3,146 @@ import 'package:provider/provider.dart';
 import '../../view_models/register_view_model.dart';
 import '../../widgets/pin_input.dart';
 
-class PinSetupStep extends StatelessWidget {
+/// PIN setup step for registration
+/// Uses StatefulWidget only for TextEditingController lifecycle management
+class PinSetupStep extends StatefulWidget {
   const PinSetupStep({super.key});
 
   @override
+  State<PinSetupStep> createState() => _PinSetupStepState();
+}
+
+class _PinSetupStepState extends State<PinSetupStep> {
+  final _normalPinController = TextEditingController();
+  final _confirmNormalPinController = TextEditingController();
+  final _normalPinFocusNode = FocusNode();
+  final _confirmNormalPinFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-focus first PIN field
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _normalPinFocusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    // Clean up controllers and focus nodes
+    _normalPinController.dispose();
+    _confirmNormalPinController.dispose();
+    _normalPinFocusNode.dispose();
+    _confirmNormalPinFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final mediaQueryWidth = MediaQuery.of(context).size.width;
-    final mediaQueryHeight = MediaQuery.of(context).size.height;
-    final textScaler = MediaQuery.of(context).textScaler;
-    
-    return Padding(
-      padding: EdgeInsets.all(mediaQueryWidth * 0.05),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Set Your PIN',
-            style: TextStyle(
-              fontSize: textScaler.scale(mediaQueryWidth * 0.06),
-              fontWeight: FontWeight.bold,
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    return Consumer<RegisterViewModel>(
+      builder: (context, viewModel, child) {
+        return Column(
+          children: [
+            Text(
+              'Set Your PIN',
+              style: TextStyle(
+                fontSize: screenWidth * 0.06,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: mediaQueryHeight * 0.02),
-          Text(
-            'This PIN will be used to unlock the app and access your account. Choose a secure 4-6 digit PIN.',
-            style: TextStyle(
-              fontSize: textScaler.scale(mediaQueryWidth * 0.04),
-              color: Colors.grey[600],
+            
+            SizedBox(height: screenHeight * 0.02),
+            
+            Text(
+              'Create a 4-6 digit PIN for secure access',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: screenWidth * 0.04,
+                color: Colors.grey[600],
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: mediaQueryHeight * 0.04),
-          
-          // PIN Input
-          Selector<RegisterViewModel, String?>(
-            selector: (_, vm) => vm.normalPin,
-            builder: (context, pin, _) => PinInput(
-              label: 'Enter PIN',
-              error: null,
-              onChanged: Provider.of<RegisterViewModel>(context, listen: false).setNormalPin,
+            
+            SizedBox(height: screenHeight * 0.04),
+            
+            // PIN input
+            PinInput(
+              label: 'PIN',
+              controller: _normalPinController,
+              focusNode: _normalPinFocusNode,
+              onSubmitted: (_) {
+                _confirmNormalPinFocusNode.requestFocus();
+              },
             ),
-          ),
-          SizedBox(height: mediaQueryHeight * 0.02),
-          
-          // Confirm PIN Input
-          Selector<RegisterViewModel, String?>(
-            selector: (_, vm) => vm.confirmNormalPin,
-            builder: (context, confirmPin, _) => PinInput(
+            
+            SizedBox(height: screenHeight * 0.02),
+            
+            // Confirm PIN input
+            PinInput(
               label: 'Confirm PIN',
-              error: null,
-              onChanged: Provider.of<RegisterViewModel>(context, listen: false).setConfirmNormalPin,
+              controller: _confirmNormalPinController,
+              focusNode: _confirmNormalPinFocusNode,
+              onSubmitted: (_) => _handleNext(),
             ),
-          ),
-          
-          // Error Message
-          SizedBox(height: mediaQueryHeight * 0.02),
-          Selector<RegisterViewModel, String?>(
-            selector: (_, vm) => vm.validateNormalPin(),
-            builder: (context, error, _) => error == null
-                ? const SizedBox.shrink()
-                : Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(mediaQueryWidth * 0.03),
-                    decoration: BoxDecoration(
-                      color: Colors.red[50],
-                      borderRadius: BorderRadius.circular(mediaQueryWidth * 0.02),
-                      border: Border.all(color: Colors.red[200]!),
-                    ),
-                    child: Text(
-                      error,
-                      style: TextStyle(
-                        color: Colors.red[700],
-                        fontSize: textScaler.scale(mediaQueryWidth * 0.04),
-                      ),
-                    ),
-                  ),
-          ),
-          
-          SizedBox(height: mediaQueryHeight * 0.04),
-          
-          // Next Button
-          Selector<RegisterViewModel, bool>(
-            selector: (_, vm) => vm.isLoading,
-            builder: (context, isLoading, _) => SizedBox(
+            
+            SizedBox(height: screenHeight * 0.04),
+            
+            // Next button
+            SizedBox(
               width: double.infinity,
-              height: mediaQueryHeight * 0.06,
+              height: screenHeight * 0.06,
               child: ElevatedButton(
-                onPressed: isLoading
-                    ? null
-                    : () {
-                        final viewModel = Provider.of<RegisterViewModel>(context, listen: false);
-                        final error = viewModel.validateNormalPin();
-                        if (error == null) {
-                          viewModel.nextStep();
-                        } else {
-                          viewModel.setError(error);
-                        }
-                      },
+                onPressed: viewModel.isLoading ? null : _handleNext,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(mediaQueryWidth * 0.02),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: isLoading
-                    ? SizedBox(
-                        width: mediaQueryWidth * 0.05,
-                        height: mediaQueryWidth * 0.05,
-                        child: const CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
+                child: viewModel.isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Text(
+                    : const Text(
                         'Next',
-                        style: TextStyle(
-                          fontSize: textScaler.scale(mediaQueryWidth * 0.05),
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                       ),
               ),
             ),
-          ),
-          
-          SizedBox(height: mediaQueryHeight * 0.02),
-          
-          // Back Button
-          TextButton(
-            onPressed: () {
-              Provider.of<RegisterViewModel>(context, listen: false).prevStep();
-            },
-            child: Text(
-              'Back',
-              style: TextStyle(
-                fontSize: textScaler.scale(mediaQueryWidth * 0.04),
-                color: Colors.deepPurple,
-              ),
+            
+            // Back button
+            TextButton(
+              onPressed: () {
+                context.read<RegisterViewModel>().prevStep();
+              },
+              child: const Text('Back'),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
+  }
+
+  void _handleNext() {
+    final viewModel = context.read<RegisterViewModel>();
+    final normalPin = _normalPinController.text;
+    final confirmPin = _confirmNormalPinController.text;
+    
+    // Validate PINs
+    final error = viewModel.validateNormalPin(normalPin, confirmPin);
+    if (error != null) {
+      viewModel.setError(error);
+      return;
+    }
+    
+    // Clear error and proceed
+    viewModel.setError(null);
+    viewModel.nextStep();
+    
+    // Note: PINs will be collected again in the final registration step
+    // This is a simple approach that avoids complex state management
   }
 } 

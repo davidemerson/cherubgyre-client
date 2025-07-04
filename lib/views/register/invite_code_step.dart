@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../../core/themes/app_colors.dart';
 import '../../view_models/register_view_model.dart';
 
 class InviteCodeStep extends StatelessWidget {
@@ -9,7 +10,6 @@ class InviteCodeStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<RegisterViewModel>();
-    final textScaler = MediaQuery.of(context).textScaler;
     final mediaQueryWidth = MediaQuery.of(context).size.width;
     final mediaQueryHeight = MediaQuery.of(context).size.height;
 
@@ -21,8 +21,9 @@ class InviteCodeStep extends StatelessWidget {
           Text(
             'Enter Invite Code',
             style: TextStyle(
-              fontSize: textScaler.scale(mediaQueryWidth * 0.06),
+              fontSize: mediaQueryWidth * 0.08,
               fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -30,8 +31,8 @@ class InviteCodeStep extends StatelessWidget {
           Text(
             'Please enter the alphanumeric invite code you received to create your account.',
             style: TextStyle(
-              fontSize: textScaler.scale(mediaQueryWidth * 0.04),
-              color: Colors.grey[600],
+              fontSize: mediaQueryWidth * 0.045,
+              color: AppColors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -57,9 +58,10 @@ class InviteCodeStep extends StatelessWidget {
               ),
             ),
             style: TextStyle(
-              fontSize: textScaler.scale(mediaQueryWidth * 0.045),
+              fontSize: mediaQueryWidth * 0.045,
               letterSpacing: 1.2,
               fontFamily: 'monospace',
+              color: AppColors.textPrimary,
             ),
           ),
           SizedBox(height: mediaQueryHeight * 0.04),
@@ -77,26 +79,28 @@ class InviteCodeStep extends StatelessWidget {
                       }
                     },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.onPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(mediaQueryWidth * 0.02),
                 ),
+                elevation: 0,
               ),
               child: viewModel.isLoading
                   ? SizedBox(
                       width: mediaQueryWidth * 0.05,
                       height: mediaQueryWidth * 0.05,
                       child: const CircularProgressIndicator(
-                        color: Colors.white,
+                        color: AppColors.onPrimary,
                         strokeWidth: 2,
                       ),
                     )
                   : Text(
                       'Continue',
                       style: TextStyle(
-                        fontSize: textScaler.scale(mediaQueryWidth * 0.05),
-                        fontWeight: FontWeight.bold,
+                        fontSize: mediaQueryWidth * 0.05,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.onPrimary,
                       ),
                     ),
             ),

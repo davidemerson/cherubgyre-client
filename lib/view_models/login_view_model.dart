@@ -1,22 +1,21 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/api_client.dart';
+import '../core/constants/api_constants.dart';
+import '../core/utils/security_utils.dart';
+import '../core/utils/session_manager.dart';
 
 class LoginViewModel extends ChangeNotifier {
   final ApiClient _apiClient;
-  final FlutterSecureStorage _storage;
 
   bool _isLoading = false;
   bool _isInitializing = true;
   String? _error;
   String _username = '';
-  String _pin = '';
   bool _isPinVisible = false;
   bool _isReturningUser = false;
 
   LoginViewModel() 
-    : _apiClient = ApiClient(),
-      _storage = const FlutterSecureStorage() {
+    : _apiClient = ApiClient() {
     _initializeUser();
   }
 
@@ -24,16 +23,15 @@ class LoginViewModel extends ChangeNotifier {
   bool get isInitializing => _isInitializing;
   String? get error => _error;
   String get username => _username;
-  String get pin => _pin;
   bool get isPinVisible => _isPinVisible;
   bool get isReturningUser => _isReturningUser;
 
   Future<void> _initializeUser() async {
     try {
       // Check if user has previously logged in
-      final savedUsername = await _storage.read(key: 'username');
-      if (savedUsername != null && savedUsername.isNotEmpty) {
-        _username = savedUsername;
+      final userData = await SessionManager.getUserData();
+      if (userData != null && userData['username'] != null) {
+        _username = userData['username'] as String;
         _isReturningUser = true;
       }
     } catch (e) {
@@ -46,12 +44,6 @@ class LoginViewModel extends ChangeNotifier {
 
   void setUsername(String value) {
     _username = value.trim();
-    _error = null;
-    notifyListeners();
-  }
-
-  void setPin(String value) {
-    _pin = value;
     _error = null;
     notifyListeners();
   }
@@ -71,53 +63,71 @@ class LoginViewModel extends ChangeNotifier {
     return null;
   }
 
-  String? validatePin() {
-    if (_pin.isEmpty) {
+  String? validatePin(String pin) {
+    if (pin.isEmpty) {
       return 'PIN is required';
     }
-    if (_pin.length < 4) {
+    if (!SecurityUtils.isValidPinFormat(pin)) {
       return 'PIN must be at least 4 digits';
-    }
-    if (!RegExp(r'^[0-9]+$').hasMatch(_pin)) {
-      return 'PIN must contain only numbers';
     }
     return null;
   }
 
-  Future<bool> login() async {
+  Future<bool> login(String pin) async {
+    debugPrint('🔐 LoginViewModel.login() called with username: $_username, pin length: ${pin.length}');
+    
     final usernameError = validateUsername();
-    final pinError = validatePin();
+    final pinError = validatePin(pin);
     
     if (usernameError != null || pinError != null) {
+      debugPrint('❌ Validation failed - usernameError: $usernameError, pinError: $pinError');
       _error = usernameError ?? pinError;
       notifyListeners();
       return false;
     }
 
     try {
+      debugPrint('🔄 Setting loading state to true');
       _isLoading = true;
       _error = null;
       notifyListeners();
+      debugPrint('✅ Loading state updated, notifying listeners');
 
+      debugPrint('📡 Calling API client login...');
       // Call API to authenticate user
-      final response = await _apiClient.login(username: _username, pin: _pin);
+      final response = await _apiClient.login(username: _username, pin: pin);
+      debugPrint('📡 API response received: $response');
       
-      if (response['success'] == true) {
-        // Store authentication token and username
-        await _storage.write(key: 'accessToken', value: response['token']);
-        await _storage.write(key: 'username', value: _username);
+      if (response[ApiConstants.successKey] == true) {
+        debugPrint('✅ Login successful, storing session data...');
+        // Store authentication data securely
+        await SessionManager.storeToken(response[ApiConstants.tokenKey]);
+        await SessionManager.storeUserData({'username': _username});
+        await SessionManager.storeLastLogin();
+        
+        // Securely clear the PIN from memory
+        SecurityUtils.secureClear(pin);
+        debugPrint('✅ Session data stored, PIN cleared');
         
         return true;
       } else {
-        _error = response['message'] ?? 'Login failed';
+        debugPrint('❌ Login failed: ${response[ApiConstants.messageKey]}');
+        _error = response[ApiConstants.messageKey] ?? 'Login failed';
+        // Securely clear the PIN from memory even on failure
+        SecurityUtils.secureClear(pin);
         return false;
       }
     } catch (e) {
+      debugPrint('💥 Login exception: $e');
       _error = 'Network error. Please try again.';
+      // Securely clear the PIN from memory even on error
+      SecurityUtils.secureClear(pin);
       return false;
     } finally {
+      debugPrint('🔄 Setting loading state to false');
       _isLoading = false;
       notifyListeners();
+      debugPrint('✅ Loading state updated, notifying listeners');
     }
   }
 
@@ -127,7 +137,7 @@ class LoginViewModel extends ChangeNotifier {
   }
 
   void clearSavedUser() async {
-    await _storage.delete(key: 'username');
+    await SessionManager.clearSession();
     _username = '';
     _isReturningUser = false;
     notifyListeners();

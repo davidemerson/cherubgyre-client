@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../services/register_service.dart';
+import '../core/constants/api_constants.dart';
+import '../core/utils/security_utils.dart';
 
 class RegisterViewModel extends ChangeNotifier {
   final RegisterService _registerService;
@@ -7,12 +9,12 @@ class RegisterViewModel extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   String? _inviteCode;
-  String? _normalPin;
-  String? _confirmNormalPin;
-  String? _duressPin;
-  String? _confirmDuressPin;
   bool _acceptedPrivacyPolicy = false;
   Map<String, dynamic>? _userData;
+  
+  // Server-assigned data
+  String? _assignedUsername;
+  String? _assignedAvatar;
 
   // Registration step state
   int _step = 0;
@@ -37,40 +39,14 @@ class RegisterViewModel extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   String? get inviteCode => _inviteCode;
-  String? get normalPin => _normalPin;
-  String? get confirmNormalPin => _confirmNormalPin;
-  String? get duressPin => _duressPin;
-  String? get confirmDuressPin => _confirmDuressPin;
   bool get acceptedPrivacyPolicy => _acceptedPrivacyPolicy;
   Map<String, dynamic>? get userData => _userData;
+  String? get assignedUsername => _assignedUsername;
+  String? get assignedAvatar => _assignedAvatar;
 
   void setInviteCode(String code) {
     // Convert to uppercase and remove any spaces for consistency
     _inviteCode = code.toUpperCase().replaceAll(' ', '');
-    _error = null;
-    notifyListeners();
-  }
-
-  void setNormalPin(String pin) {
-    _normalPin = pin;
-    _error = null;
-    notifyListeners();
-  }
-
-  void setConfirmNormalPin(String pin) {
-    _confirmNormalPin = pin;
-    _error = null;
-    notifyListeners();
-  }
-
-  void setDuressPin(String pin) {
-    _duressPin = pin;
-    _error = null;
-    notifyListeners();
-  }
-
-  void setConfirmDuressPin(String pin) {
-    _confirmDuressPin = pin;
     _error = null;
     notifyListeners();
   }
@@ -111,37 +87,30 @@ class RegisterViewModel extends ChangeNotifier {
     return null;
   }
 
-  String? validateNormalPin() {
-    final normalPin = _normalPin;
-    final confirmNormalPin = _confirmNormalPin;
-    
-    if (normalPin == null || confirmNormalPin == null) {
+  String? validateNormalPin(String normalPin, String confirmNormalPin) {
+    if (normalPin.isEmpty || confirmNormalPin.isEmpty) {
       return 'Both fields are required';
     }
     if (normalPin != confirmNormalPin) {
       return 'PINs do not match';
     }
-    if (normalPin.length < 4) {
+    if (!SecurityUtils.isValidPinFormat(normalPin)) {
       return 'PIN must be at least 4 digits';
     }
     return null;
   }
 
-  String? validateDuressPin() {
-    final duressPin = _duressPin;
-    final confirmDuressPin = _confirmDuressPin;
-    final normalPin = _normalPin;
-    
-    if (duressPin == null || confirmDuressPin == null) {
+  String? validateDuressPin(String duressPin, String confirmDuressPin, String normalPin) {
+    if (duressPin.isEmpty || confirmDuressPin.isEmpty) {
       return 'Both fields are required';
     }
     if (duressPin != confirmDuressPin) {
       return 'PINs do not match';
     }
-    if (duressPin.length < 4) {
+    if (!SecurityUtils.isValidPinFormat(duressPin)) {
       return 'PIN must be at least 4 digits';
     }
-    if (normalPin != null && duressPin == normalPin) {
+    if (normalPin.isNotEmpty && duressPin == normalPin) {
       return 'Duress PIN cannot be the same as your normal PIN';
     }
     return null;
@@ -190,9 +159,9 @@ class RegisterViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> register() async {
-    final pinError = validateNormalPin();
-    final duressError = validateDuressPin();
+  Future<bool> register(String normalPin, String duressPin) async {
+    final pinError = validateNormalPin(normalPin, normalPin); // Same PIN for validation
+    final duressError = validateDuressPin(duressPin, duressPin, normalPin);
     final privacyError = validatePrivacyPolicy();
     
     if (pinError != null || duressError != null || privacyError != null) {
@@ -202,10 +171,7 @@ class RegisterViewModel extends ChangeNotifier {
     }
 
     final inviteCode = _inviteCode;
-    final normalPin = _normalPin;
-    final duressPin = _duressPin;
-
-    if (inviteCode == null || normalPin == null || duressPin == null) {
+    if (inviteCode == null || normalPin.isEmpty || duressPin.isEmpty) {
       _error = 'All required fields must be completed';
       notifyListeners();
       return false;
@@ -222,9 +188,22 @@ class RegisterViewModel extends ChangeNotifier {
         duressPin: duressPin,
       );
 
+      // Extract server-assigned username and avatar
+      if (_userData != null) {
+        _assignedUsername = _userData![ApiConstants.usernameKey] as String?;
+        _assignedAvatar = _userData![ApiConstants.avatarKey] as String?;
+      }
+
+      // Securely clear PINs from memory
+      SecurityUtils.secureClear(normalPin);
+      SecurityUtils.secureClear(duressPin);
+
       return true;
     } catch (e) {
       _error = e.toString();
+      // Securely clear PINs from memory even on error
+      SecurityUtils.secureClear(normalPin);
+      SecurityUtils.secureClear(duressPin);
       return false;
     } finally {
       _isLoading = false;

@@ -1,56 +1,104 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../core/themes/app_colors.dart';
 
 class PinInput extends StatelessWidget {
   final String label;
+  final TextEditingController controller;
+  final FocusNode? focusNode;
+  final bool isVisible;
+  final Function(String)? onChanged;
+  final Function()? onToggleVisibility;
+  final Function(String)? onSubmitted;
   final String? error;
-  final ValueChanged<String> onChanged;
-  final bool obscureText;
-  final TextEditingController? controller;
 
   const PinInput({
     super.key,
     required this.label,
+    required this.controller,
+    this.focusNode,
+    this.isVisible = false,
+    this.onChanged,
+    this.onToggleVisibility,
+    this.onSubmitted,
     this.error,
-    required this.onChanged,
-    this.obscureText = true,
-    this.controller,
   });
 
   @override
   Widget build(BuildContext context) {
-    final textScaler = MediaQuery.of(context).textScaler;
-    final size = MediaQuery.of(context).size;
+    final mediaQueryWidth = MediaQuery.of(context).size.width;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: textScaler.scale(16),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        SizedBox(height: size.height * 0.01),
         TextField(
           controller: controller,
-          obscureText: obscureText,
+          focusNode: focusNode,
+          obscureText: !isVisible,
           keyboardType: TextInputType.number,
           inputFormatters: [
             FilteringTextInputFormatter.digitsOnly,
             LengthLimitingTextInputFormatter(6),
           ],
-          onChanged: onChanged,
+          onChanged: (value) {
+            debugPrint('📝 PIN input changed: ${value.length} characters');
+            onChanged?.call(value);
+          },
+          onSubmitted: (value) {
+            debugPrint('📝 PIN input submitted: ${value.length} characters');
+            onSubmitted?.call(value);
+          },
+          style: TextStyle(
+            fontSize: mediaQueryWidth * 0.045,
+            color: AppColors.textPrimary,
+          ),
           decoration: InputDecoration(
+            labelText: label,
+            labelStyle: TextStyle(
+              fontSize: mediaQueryWidth * 0.035,
+              color: AppColors.textSecondary,
+            ),
             errorText: error,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: AppColors.border,
+              ),
             ),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: size.width * 0.04,
-              vertical: size.height * 0.02,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: AppColors.border,
+              ),
             ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: AppColors.primary,
+                width: 2,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: AppColors.error,
+              ),
+            ),
+            filled: true,
+            fillColor: AppColors.surface,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+            suffixIcon: onToggleVisibility != null
+                ? IconButton(
+                    icon: Icon(
+                      isVisible ? Icons.visibility_off : Icons.visibility,
+                      color: AppColors.textSecondary,
+                    ),
+                    onPressed: onToggleVisibility,
+                  )
+                : null,
           ),
         ),
       ],

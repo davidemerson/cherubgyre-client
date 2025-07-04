@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../core/themes/app_colors.dart';
 import 'login_view.dart';
 import 'register/register_view.dart';
 
@@ -66,7 +67,6 @@ class _SplashViewState extends State<SplashView> {
   Widget build(BuildContext context) {
     final mediaQueryWidth = MediaQuery.of(context).size.width;
     final mediaQueryHeight = MediaQuery.of(context).size.height;
-    final textScaler = MediaQuery.of(context).textScaler;
 
     return Scaffold(
       body: Center(
@@ -83,9 +83,9 @@ class _SplashViewState extends State<SplashView> {
             Text(
               'Cherubgyre',
               style: TextStyle(
-                fontSize: textScaler.scale(mediaQueryWidth * 0.08),
+                fontSize: mediaQueryWidth * 0.08,
                 fontWeight: FontWeight.bold,
-                color: Colors.deepPurple,
+                color: AppColors.primary,
               ),
             ),
             SizedBox(height: mediaQueryHeight * 0.04),
@@ -95,15 +95,17 @@ class _SplashViewState extends State<SplashView> {
               SizedBox(
                 width: mediaQueryWidth * 0.1,
                 height: mediaQueryWidth * 0.1,
-                child: const CircularProgressIndicator(),
+                child: const CircularProgressIndicator(
+                  color: AppColors.primary,
+                ),
               ),
             ] else ...[
               // Auth options after splash
               Text(
                 'Welcome to Cherubgyre',
                 style: TextStyle(
-                  fontSize: textScaler.scale(mediaQueryWidth * 0.05),
-                  color: Colors.grey[600],
+                  fontSize: mediaQueryWidth * 0.05,
+                  color: AppColors.textSecondary,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -116,17 +118,19 @@ class _SplashViewState extends State<SplashView> {
                 child: ElevatedButton(
                   onPressed: _navigateToRegister,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(mediaQueryWidth * 0.02),
                     ),
+                    elevation: 0,
                   ),
                   child: Text(
                     'Register',
                     style: TextStyle(
-                      fontSize: textScaler.scale(mediaQueryWidth * 0.05),
-                      fontWeight: FontWeight.bold,
+                      fontSize: mediaQueryWidth * 0.05,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.onPrimary,
                     ),
                   ),
                 ),
@@ -140,8 +144,8 @@ class _SplashViewState extends State<SplashView> {
                 child: OutlinedButton(
                   onPressed: _navigateToLogin,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.deepPurple,
-                    side: const BorderSide(color: Colors.deepPurple),
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(mediaQueryWidth * 0.02),
                     ),
@@ -149,8 +153,9 @@ class _SplashViewState extends State<SplashView> {
                   child: Text(
                     'Sign In',
                     style: TextStyle(
-                      fontSize: textScaler.scale(mediaQueryWidth * 0.05),
-                      fontWeight: FontWeight.bold,
+                      fontSize: mediaQueryWidth * 0.05,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
                     ),
                   ),
                 ),

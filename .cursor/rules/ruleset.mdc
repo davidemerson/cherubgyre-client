@@ -3,173 +3,700 @@ description:
 globs: 
 alwaysApply: false
 ---
-# Flutter Provider + MVVM App Development Rules
+## CherubGyre Flutter App — Development Ruleset
+
+**Project:** CherubGyre — Secure Assistance App for At-Risk Individuals
+**Framework:** Flutter (Provider for state management)
+**Audience:** Vulnerable users (journalists, politicians, celebrities, activists, etc.)
+**Focus:** Security, privacy, performance, responsiveness, maintainability, testability, and code clarity
+
+> **CORE PRINCIPLE:** Security is paramount. Every feature must be designed with adversarial thinking. Assume the device may be compromised, the network may be monitored, and the user may be under duress.
 
 ---
 
-## Architecture and State Management
+### 1. **Widget & State Management**
 
-1. Stateless UI by Default**
+* Use `StatelessWidget` by default. Only use `StatefulWidget` for unavoidable widget-specific state.
+* Use **Provider** for state management and dependency injection.
 
-   * Use `StatelessWidget` by default. Use `StatefulWidget` only for local, view-specific state.
-   * UI widgets must **not** manage business logic or application state directly.
-
-2. **Scoped Providers**
-
-   * Wrap only the smallest necessary part of the widget tree with a Provider.
-   * Use global providers only for genuinely app-wide state (e.g., authentication, theme).
-   * Feature/screen-specific providers must be scoped only to those features/screens.
-
-3. **Provider Types**
-
-   * Use `ChangeNotifierProvider` for mutable, observable ViewModels.
-   * Use `Provider` for immutable, injected dependencies.
-   * Use `Provider.value` only with pre-existing objects that don’t require disposal.
-
-4. **Project-wide Impact**
-
-   * **Every new functionality or implementation decision must consider the overall project architecture and scope.**
-   * All architectural choices must be consistent with the existing structure, and should not introduce unnecessary global state or tight coupling.
-
-5. **MVVM Pattern**
-
-   * **Model:** Pure data classes, no business/UI logic.
-   * **View:** Stateless widgets, focused only on UI.
-   * **ViewModel:** Contains all business logic and state for its view.
-
-6. **No Unnecessary Global State**
-
-   * Never put feature- or session-specific state in global providers.
-
-7. **Optimization**
-
-   * Use `context.read` for one-off actions (not for values that trigger rebuilds).
-   * Use `context.select` or `Selector` for fine-grained listening.
-   * Place `Consumer`/`Selector` as close as possible to widgets needing rebuild.
-
-8. **Provider Disposal**
-
-   * Ensure correct disposal of ViewModels/providers, tied to their widget’s lifecycle.
-
-9. **No Cross-Widget BuildContext Access**
-
-   * Use Provider for dependencies, not widget constructors, except for local state.
-
-10. **Testing**
-
-    * All ViewModels/providers should be independently testable.
+  * Avoid global/app-wide Providers unless absolutely necessary (e.g., authentication/session).
+  * Prefer feature- or page-level Providers.
+  * Use `ChangeNotifierProvider` for reactive state management.
+  * Use `ProxyProvider` for providers that depend on other providers.
+  * Always dispose providers properly to prevent memory leaks.
+  * Do **not** use global variables for app data.
+* Minimize widget rebuilds using `Consumer`, `Selector`, etc.
+* **Never put business logic in UI code.**
+  Place all logic in ViewModels or Controllers.
+* Consider widget keys for maintaining state across rebuilds when necessary.
+* Use `const` constructors wherever possible for performance.
 
 ---
 
-## Responsiveness and Platform Support
+### 2. **Responsiveness & UI**
 
-11. **Responsive Sizing Using MediaQuery**
+* **No hardcoded widget sizes.**
+* All sizes (height, width, padding, font, etc.) must use MediaQuery or similar techniques to scale with screen size.
+* Define clear breakpoints:
+  * Phone: width < 600dp
+  * Tablet: width >= 600dp and < 900dp
+  * Large tablet/Desktop: width >= 900dp
+* Use `LayoutBuilder` for responsive layouts and `OrientationBuilder` for orientation-specific UI.
+* Minimum touch target size: 48x48 dp (accessibility requirement).
+* **Dark mode support is mandatory** - use Theme-aware colors throughout.
+* UI must be responsive on all screen sizes (phones, tablets, Android, iOS).
+* Test UI on at least three screen sizes and both orientations before considering a screen complete.
+* Support safe area insets (notches, home indicators).
+* Implement proper keyboard handling and avoiding overlaps.
 
-* At the start of each screen, set variables for `mediaQueryWidth` and `mediaQueryHeight` from `MediaQuery.of(context).size`.
-* All sizes, paddings, margins, spacings, and font sizes must be calculated as a percentage of these values (not hardcoded or static).
-* Example:
+---
 
-  ```dart
-  final mediaQueryWidth = MediaQuery.of(context).size.width;
-  final mediaQueryHeight = MediaQuery.of(context).size.height;
-  // Usage:
-  SizedBox(height: mediaQueryHeight * 0.02) // 2% of screen height
-  Padding(padding: EdgeInsets.symmetric(horizontal: mediaQueryWidth * 0.05)) // 5% of screen width
+### 3. **Architecture & Structure**
+
+* **Follow Clean Architecture principles and MVVM pattern:**
+
+  * Separate UI, ViewModel, Repository, and Data layers.
+  * No tight coupling between layers. Use interfaces and abstractions.
+  * Repository pattern with abstract interfaces and concrete implementations.
+  * Use cases/interactors for complex business logic.
+  * Error transformation happens at repository level.
+  
+* **Mandatory folder structure:**
   ```
-* This approach ensures full responsiveness across all device sizes.
-
-12. **Cross-Platform Compatibility**
-
-* All developed features and UI must function **completely** on both iOS and Android.
-* All screens must be **responsive** and display correctly on devices with varying screen sizes, including tablets and small phones.
-
----
-
-## Code Quality and Maintainability
-
-13. **Minimal Third-Party Packages**
-
-* Avoid reliance on third-party packages unless absolutely necessary (e.g., core Flutter plugins, proven solutions).
-* Justify any third-party package use and document it, as such dependencies can cause issues with future updates, maintenance, and security.
-
-14. **Readable and Maintainable Code**
-
-* Code must be clear, well-structured, and self-explanatory.
-* Use meaningful names, clear organization, and adequate comments where needed.
-* Code should be easy for any developer to understand, modify, and extend.
-
-15. **Future-Proofing**
-
-* App structure must allow for **easy updates** and adaptation to upcoming functionalities.
-* New features must fit into the MVVM and Provider architecture without breaking existing logic or causing tight coupling.
-
----
-
-## Example Project Structure
-
-```
-lib/
-├── main.dart
-├── app.dart                      // App entry & global providers
-│
-├── models/                       // Data classes only (no logic)
-│   └── user.dart
-│
-├── view_models/                  // One ViewModel per feature/screen
-│   └── home_view_model.dart
-│   └── login_view_model.dart
-│
-├── views/                        // Screens/pages
-│   └── home_screen.dart
-│   └── login_screen.dart
-│
-├── widgets/                      // Reusable widgets (stateless)
-│   └── custom_button.dart
-│
-├── services/                     // API, DB, storage, platform logic
-│   └── user_service.dart
-│
-├── utils/                        // Helpers, constants
-│   └── responsive.dart           // e.g., helpers for responsive design
-│
-└── routes/                       // Navigation setup (if complex)
-    └── app_routes.dart
-```
+  /lib
+    /core
+      /constants (app constants, API endpoints)
+      /errors (custom exceptions, failure classes)
+      /themes (app themes, colors, text styles)
+      /utils (shared utilities, helpers)
+      /extensions (Dart extensions)
+    /features
+      /<feature_name>
+        /data
+          /datasources (remote/local data sources)
+          /models (DTOs, data models)
+          /repositories (repository implementations)
+        /domain
+          /entities (business entities)
+          /repositories (repository contracts)
+          /usecases (business logic)
+        /presentation
+          /views (UI screens)
+          /view_models (state management)
+          /widgets (feature-specific widgets)
+    /shared
+      /widgets (reusable widgets)
+      /services (app-wide services)
+      /models (shared data models)
+      /utils (shared utilities)
+  ```
 
 ---
 
-## Sample Code Snippet for Responsive Sizing
+### 4. **Testing**
 
-```dart
-// In any screen
-class HomeScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final mediaQueryWidth = MediaQuery.of(context).size.width;
-    final mediaQueryHeight = MediaQuery.of(context).size.height;
+* **Automated tests are mandatory:**
 
-    return Scaffold(
-      body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: mediaQueryWidth * 0.05),
-        child: Column(
-          children: [
-            SizedBox(height: mediaQueryHeight * 0.04),
-            Text(
-              'Welcome',
-              style: TextStyle(fontSize: mediaQueryWidth * 0.07),
-            ),
-            SizedBox(height: mediaQueryHeight * 0.02),
-            // ...
-          ],
-        ),
-      ),
-    );
-  }
-}
-```
+  * Unit tests for all business logic (ViewModels, services, utilities).
+  * Widget tests for critical UI components.
+  * Integration tests for critical user flows (auth, duress scenarios).
+  * Golden tests for important UI states.
+  * Security-specific test scenarios including:
+    - PIN validation edge cases
+    - Duress flow activation
+    - Data encryption/decryption
+    - Network security measures
+    - Memory leak detection
+  * Use mock dependencies (`mockito`, `mocktail`, `flutter_test`); never access real APIs in tests.
+  * **Maintain code coverage of at least 80% for business logic, 60% overall.**
+* **Testing tools and frameworks:**
+  * `flutter_test` for unit and widget tests
+  * `integration_test` for full app testing
+  * `mockito` or `mocktail` for mocking
+  * `golden_toolkit` for golden tests
+  * `leak_tracker` for memory leak detection
+* Performance testing for app launch time and critical operations.
+* Regular penetration testing schedule (quarterly for security features).
+* Device-specific testing on both iOS and Android.
 
 ---
 
-## Summary Statement
+### 5. **Error Handling**
 
-> Every design and implementation choice must consider the entire project’s scope and future growth. Only add Providers where absolutely needed and minimize their scope. Use MediaQuery-based sizing for true responsiveness. Minimize third-party dependencies. The app must be fully functional on both iOS and Android, and code must be maintainable and adaptable for future features.
+* **Centralized and graceful error handling:**
+
+  * Define specific error types: `NetworkError`, `AuthError`, `ValidationError`, `DuressError`, etc.
+  * All async operations must catch and handle errors appropriately.
+  * Show user-friendly error messages (never expose technical details).
+  * Implement retry logic with exponential backoff for network requests.
+  * Log errors securely for debugging (sanitize sensitive information).
+  * Network connectivity monitoring with appropriate user feedback.
+* **Crash reporting must respect privacy:**
+  * No automatic crash reporting without explicit user consent.
+  * Sanitize all crash reports to remove sensitive data.
+  * Local crash log storage with user-controlled submission.
+  * Use `flutter_error_reporter` or similar privacy-focused solutions.
+* **Error boundaries for critical sections:**
+  * Wrap sensitive operations in try-catch blocks.
+  * Graceful degradation when non-critical features fail.
+  * Never let errors expose system information.
+
+---
+
+### 6. **Performance & Optimization**
+
+* **Performance requirements:**
+  * App cold launch: < 2 seconds
+  * Screen transitions: < 300ms
+  * API response handling: show loading state within 100ms
+  * Memory usage: < 100MB under normal operation
+* **Flutter-specific optimizations:**
+  * Use `ListView.builder` for large lists.
+  * Implement proper `dispose()` methods.
+  * Use `RepaintBoundary` for complex widgets.
+  * Profile with Flutter DevTools regularly.
+  * Use `--profile` builds for performance testing.
+* Use **lazy loading** for lists, images, and data.
+* Implement pagination for large data sets (max 50 items per page).
+* **Image optimization:**
+  * Use appropriate formats (WebP preferred).
+  * Implement caching with size limits (`cached_network_image`).
+  * Load thumbnails before full images.
+  * Use `Image.memory` for sensitive images (auto-dispose).
+* **Debounce/throttle user inputs** (search: 500ms, buttons: 300ms).
+* **Build optimization:**
+  * Use `--split-debug-info` and `--obfuscate` for release builds.
+  * Enable tree shaking and minimize app size.
+  * Use `--dart-define` for build-time constants.
+  * Implement code splitting where appropriate.
+* Monitor memory usage and prevent leaks.
+* Regular performance profiling and optimization.
+
+---
+
+### 7. **Networking & Data**
+
+* **Security-first networking:**
+  * Certificate pinning for all API connections.
+  * Request signing with HMAC for API integrity.
+  * API versioning with graceful degradation.
+  * Connection timeouts: 30s connection, 60s read/write.
+  * Implement offline-first architecture with conflict resolution.
+  * Use `dio` with security interceptors.
+* **No direct API access from UI or ViewModels.**
+  * All API calls through repositories/services.
+  * Use well-defined data models and DTOs.
+  * Implement request/response interceptors for common logic.
+* **Data handling:**
+  * Validate all incoming data using schema validation.
+  * Sanitize user inputs before sending.
+  * Use type-safe parsing (no dynamic types).
+  * Implement data caching with expiration policies.
+  * Use `json_serializable` for type-safe JSON handling.
+* **Offline support:**
+  * Local database with `sqflite` or `hive` (encrypted).
+  * Data synchronization strategies.
+  * Conflict resolution for offline changes.
+  * Queue management for offline operations.
+
+---
+
+### 8. **Dependency Management**
+
+* **Strict dependency policies:**
+  * **Minimize external packages:** prefer built-in Dart/Flutter libraries and write small utilities in-house when practical. Add a third-party package only when it provides significant, well-justified benefit that cannot be achieved reasonably with core APIs.
+  * Use exact version pinning for security-critical packages.
+  * Quarterly dependency audits for vulnerabilities.
+  * Maintain an approved package list with justifications.
+  * Fork and audit policy for critical dependencies.
+  * Document why each dependency is needed.
+* **Flutter-specific considerations:**
+  * Use `flutter pub deps` to analyze dependency tree.
+  * Avoid packages with native code unless absolutely necessary.
+  * Prefer packages with null safety.
+  * Check package maintenance and community support.
+* Use dependency injection (`get_it` with Provider) for:
+  * Service locator pattern implementation.
+  * Testability and loose coupling.
+  * Scoped dependency lifetimes.
+* Minimize dependencies - evaluate alternatives before adding new packages.
+* **Required security packages:**
+  * `flutter_secure_storage` for sensitive data
+  * `crypto` for encryption operations
+  * `local_auth` for device authentication (if needed)
+  * `device_info_plus` for device security checks
+
+---
+
+### 9. **Platform-Specific Considerations**
+
+* **iOS-specific requirements:**
+  * Keychain access and security groups.
+  * App Transport Security (ATS) compliance.
+  * Background app refresh handling.
+  * Privacy manifest requirements.
+  * TestFlight and App Store compliance.
+* **Android-specific requirements:**
+  * Keystore integration and security.
+  * ProGuard/R8 configuration.
+  * APK signing and bundle optimization.
+  * Play Store compliance and policies.
+  * Manifest permissions and security.
+* **Cross-platform considerations:**
+  * Platform-specific UI adaptations.
+  * Native channel implementation for security features.
+  * Platform-specific testing requirements.
+  * Performance differences between platforms.
+
+---
+
+### 10. **Internationalization (i18n)**
+
+* **Full i18n support from day one:**
+  * Use `flutter_localizations` and `intl` package.
+  * Externalize ALL user-facing strings.
+  * Support for:
+    - Date/time formatting per locale
+    - Number and currency formatting
+    - Pluralization rules
+    - RTL languages (Arabic, Hebrew)
+  * Implement fallback locale (English).
+  * Context-aware translations (same word, different contexts).
+* Store language preference securely.
+* Test all supported languages before release.
+* **Security considerations:**
+  * Validate translated strings for injection attacks.
+  * Ensure consistent security messaging across languages.
+  * Cultural sensitivity for security warnings.
+
+---
+
+### 11. **Linting, Formatting & CI/CD**
+
+* **Strict code quality enforcement:**
+  ```yaml
+  # Mandatory analysis_options.yaml settings:
+  analyzer:
+    strong-mode:
+      implicit-casts: false
+      implicit-dynamic: false
+    errors:
+      missing_required_param: error
+      missing_return: error
+      invalid_use_of_protected_member: error
+      unused_import: error
+      unused_local_variable: error
+      dead_code: error
+      
+  linter:
+    rules:
+      - avoid_print
+      - avoid_dynamic_calls
+      - prefer_const_constructors
+      - prefer_const_literals_to_create_immutables
+      - always_declare_return_types
+      - avoid_empty_else
+      - cancel_subscriptions
+      - close_sinks
+      - prefer_final_fields
+      - prefer_final_locals
+      - avoid_function_literals_in_foreach_calls
+      - avoid_returning_null_for_future
+      - avoid_slow_async_io
+      - avoid_types_as_parameter_names
+      - camel_case_types
+      - non_constant_identifier_names
+      - prefer_is_empty
+      - prefer_is_not_empty
+      - prefer_single_quotes
+      - sized_box_for_whitespace
+      - sort_child_properties_last
+      - use_build_context_synchronously
+      - use_key_in_widget_constructors
+  ```
+* **CI/CD requirements:**
+  * No PR merges without:
+    - All tests passing
+    - Lint checks passing
+    - Code coverage thresholds met
+    - Security scan passing
+    - Performance benchmarks met
+  * Automated builds for every PR.
+  * Signed builds for release candidates.
+  * Environment-specific configurations.
+  * **Security scanning tools:**
+    - Static analysis with `dart analyze`
+    - Dependency vulnerability scanning
+    - Code obfuscation verification
+    - Certificate pinning validation
+
+---
+
+### 12. **Documentation**
+
+* **Comprehensive documentation:**
+  * Document all public classes and methods with DartDoc.
+  * Include examples in documentation where helpful.
+  * Add inline comments for complex algorithms.
+  * Each feature must have a README with:
+    - Purpose and functionality
+    - Architecture decisions
+    - Testing approach
+    - Security considerations
+    - Performance implications
+* Maintain an up-to-date API documentation.
+* Architecture Decision Records (ADRs) for significant choices.
+* Security documentation separate from public docs.
+* **Flutter-specific documentation:**
+  * Widget tree diagrams for complex UIs.
+  * State management flow diagrams.
+  * Performance optimization notes.
+  * Platform-specific implementation details.
+
+---
+
+### 13. **Accessibility**
+
+* **Full accessibility support:**
+  * All interactive widgets must have semantic labels.
+  * Support screen readers (TalkBack, VoiceOver).
+  * Minimum contrast ratios: 4.5:1 for normal text, 3:1 for large text.
+  * Support for:
+    - Dynamic font sizing
+    - High contrast mode
+    - Reduced motion preferences
+    - Switch control (iOS)
+    - Voice commands
+  * Test with accessibility tools before each release.
+  * Keyboard navigation support where applicable.
+* **Mobile-specific accessibility:**
+  * Voice-over navigation testing.
+  * Touch exploration support.
+  * Gesture-based navigation alternatives.
+  * Screen reader announcements for security events.
+* Consider cognitive accessibility (clear language, simple flows).
+* **Security and accessibility balance:**
+  * Ensure security measures don't break accessibility.
+  * Provide alternative access methods for users with disabilities.
+  * Security warnings must be accessible.
+
+---
+
+### 14. **App Lifecycle & Background Processing**
+
+* **Proper lifecycle management:**
+  * Handle app states: `resumed`, `paused`, `detached`, `inactive`.
+  * Secure data clearing when app goes to background.
+  * Session management across app lifecycle.
+  * Proper resource cleanup on app termination.
+* **Background processing security:**
+  * No sensitive operations in background.
+  * Clear sensitive data from memory when backgrounded.
+  * Disable screenshots/app switching previews.
+  * Handle interruptions (calls, notifications) securely.
+* **Platform-specific lifecycle considerations:**
+  * iOS: Handle app delegate callbacks.
+  * Android: Proper activity lifecycle management.
+  * Handle system-initiated restarts.
+
+---
+
+### 15. **Backup & Recovery**
+
+* **Data backup strategy:**
+  * Identify what data can be backed up safely.
+  * Implement secure backup mechanisms.
+  * User-controlled backup settings.
+  * Recovery procedures for lost devices.
+* **Security considerations:**
+  * Never backup sensitive authentication data.
+  * Encrypt all backup data.
+  * Secure backup storage solutions.
+  * Recovery without compromising security.
+* **Platform-specific backup:**
+  * iOS: iCloud Keychain integration.
+  * Android: Google Drive backup considerations.
+  * Cross-platform recovery strategies.
+
+---
+
+### 16. **Logging & Monitoring**
+
+* **Application logging:**
+  * Structured logging with severity levels.
+  * No sensitive data in logs.
+  * Local log rotation and management.
+  * Debug vs release logging differences.
+* **Performance monitoring:**
+  * Track app performance metrics.
+  * Monitor memory usage patterns.
+  * Network request performance.
+  * User interaction response times.
+* **Security monitoring:**
+  * Failed authentication attempts.
+  * Unusual usage patterns.
+  * Security event logging.
+  * Tamper detection events.
+* **Privacy-compliant monitoring:**
+  * No user tracking without consent.
+  * Anonymous usage statistics only.
+  * Local monitoring preferred over remote.
+
+---
+
+### 17. **Extensibility & Maintenance**
+
+* **Design for long-term maintenance:**
+  * Document extension points for new features.
+  * Use feature flags for gradual rollouts.
+  * Implement plugin architecture for optional features.
+  * Version migration strategies for data schema changes.
+* New features must:
+  * Follow established patterns.
+  * Include tests from day one.
+  * Be reviewed for security implications.
+  * Update relevant documentation.
+* **Code maintenance:**
+  * Regular refactoring sessions.
+  * Deprecated API migration plans.
+  * Technical debt tracking and resolution.
+  * Performance regression monitoring.
+
+---
+
+### 18. **Security Features & Duress Handling** *(CRITICAL)*
+
+* **Device Security:**
+  * Root/jailbreak detection with graceful degradation.
+  * Anti-tampering and anti-debugging measures.
+  * App integrity verification on startup.
+  * Screen recording/screenshot prevention for sensitive screens.
+  * Clipboard clearing after sensitive data copy.
+  * Device binding and verification.
+
+* **Authentication & Session Management:**
+  * PIN-based authentication (no biometrics in scope).
+  * Session timeout: 5 minutes of inactivity.
+  * Automatic logout on app background (configurable).
+  * Failed attempt tracking: lock after 5 attempts.
+  * Progressive delays between failed attempts (1s, 2s, 4s, 8s, 16s).
+  * Secure session token storage and rotation.
+  * Multiple session invalidation.
+
+* **Data Protection:**
+  * End-to-end encryption for all communications.
+  * AES-256 for local data encryption.
+  * Secure key generation using platform APIs.
+  * Memory protection: clear sensitive data immediately after use.
+  * Use `flutter_secure_storage` for all sensitive data.
+  * Implement secure delete (multiple overwrites).
+  * Database encryption at rest.
+
+* **Network Security:**
+  * Certificate pinning with backup pins.
+  * Detect and handle MITM attempts.
+  * VPN-friendly but VPN-aware.
+  * DNS-over-HTTPS where possible.
+  * No data transmission over unencrypted channels.
+  * Request tampering detection.
+
+* **Duress-Specific Requirements:**
+  * **PIN Handling:**
+    - Never log or persist PINs in any form.
+    - Use secure input methods (obscured entry).
+    - Clear PIN from memory immediately after verification.
+    - Salt and hash PINs before comparison.
+    - Constant-time comparison to prevent timing attacks.
+  
+  * **Duress Activation:**
+    - Support multiple duress PINs (different severity levels).
+    - Silent activation - app appears normal to attacker.
+    - Configurable duress actions:
+      - Send emergency notifications
+      - Share location with trusted contacts
+      - Activate recording (audio/video)
+      - Wipe sensitive data
+      - Create decoy data
+      - Trigger remote wipe
+    - Dead man's switch option (periodic check-ins).
+    - Panic button activation via hardware buttons.
+    - Geo-fence triggers for automatic activation.
+    - Time-based automatic activation.
+  
+  * **Testing Requirements:**
+    - Mock all external duress actions for testing.
+    - Test each duress scenario thoroughly.
+    - Verify no UI differences between normal and duress mode.
+    - Performance testing under duress (must not lag).
+    - Stress testing of duress systems.
+
+* **Audit & Monitoring:**
+  * Local security event logging (encrypted).
+  * No external analytics without explicit consent.
+  * Anomaly detection for unusual usage patterns.
+  * Regular security audits (quarterly).
+  * Penetration testing before major releases.
+  * Security incident response procedures.
+
+---
+
+### 19. **Code Security**
+
+* **Source code protection:**
+  * Obfuscation mandatory for release builds.
+  * ProGuard/R8 configuration for Android.
+  * String encryption for sensitive constants.
+  * No hardcoded secrets, API keys, or endpoints.
+  * Use build-time injection for environment configs.
+  * Code signing with proper certificates.
+* **Anti-reverse engineering:**
+  * Native code for critical security functions.
+  * Integrity checks throughout the app.
+  * Detect common reverse engineering tools.
+  * Runtime Application Self-Protection (RASP).
+* **Build security:**
+  * Secure build environment.
+  * Reproducible builds.
+  * Supply chain security.
+  * Dependency verification.
+* Regular security scanning of codebase.
+
+---
+
+### 20. **Privacy & Compliance**
+
+* **Privacy by design:**
+  * Data minimization - collect only what's necessary.
+  * Purpose limitation - use data only for stated purposes.
+  * User consent required for any data collection.
+  * Clear data retention policies (max 90 days for logs).
+  * User-controlled data deletion.
+* **Compliance requirements:**
+  * GDPR compliance for EU users.
+  * CCPA compliance for California users.
+  * PIPEDA compliance for Canadian users.
+  * Implement privacy policy versioning.
+  * Export user data on request.
+  * Right to be forgotten implementation.
+* **Permissions:**
+  * Request minimum necessary permissions.
+  * Explain why each permission is needed.
+  * Graceful degradation if permissions denied.
+  * Re-request only when user initiates related action.
+  * Runtime permission handling.
+* **Data residency:**
+  * Understand where data is stored.
+  * Comply with local data protection laws.
+  * Cross-border data transfer restrictions.
+
+---
+
+### 21. **Release & Deployment**
+
+* **Release criteria:**
+  * All tests passing (unit, widget, integration).
+  * Security scan completed.
+  * Performance benchmarks met.
+  * Accessibility audit passed.
+  * Documentation updated.
+  * Penetration testing completed.
+* **Deployment security:**
+  * Code signing certificates properly secured.
+  * Build process isolated and monitored.
+  * Release notes sanitized (no security details).
+  * Staged rollout for major changes.
+  * Rollback plan for each release.
+* **App Store considerations:**
+  * App Store review guidelines compliance.
+  * Privacy nutrition labels.
+  * Age rating considerations.
+  * Regional availability restrictions.
+* **Post-release monitoring:**
+  * Crash reporting analysis.
+  * Performance monitoring.
+  * User feedback monitoring.
+  * Security incident monitoring.
+
+---
+
+### 22. **Incident Response**
+
+* **Security incident planning:**
+  * Incident response team defined.
+  * Communication channels established.
+  * User notification templates prepared.
+  * Data breach procedures documented.
+  * Regular drills and updates.
+  * Legal and regulatory notification procedures.
+* **Bug bounty considerations:**
+  * Responsible disclosure policy.
+  * Security contact clearly defined.
+  * Acknowledgment SLA: 48 hours.
+  * Remediation timeline commitments.
+* **Crisis management:**
+  * Emergency contact procedures.
+  * Media relations planning.
+  * User communication strategies.
+  * Service continuity plans.
+
+---
+
+### 23. **Code Generation & Build Tools**
+
+* **Code generation standards:**
+  * Use `json_serializable` for JSON models.
+  * `freezed` for immutable data classes.
+  * `injectable` for dependency injection.
+  * Custom code generators must be secure.
+* **Build tools security:**
+  * Secure build scripts.
+  * Environment variable handling.
+  * Build artifact verification.
+  * Dependency resolution security.
+* **Flutter-specific tools:**
+  * `flutter_launcher_icons` for app icons.
+  * `flutter_native_splash` for splash screens.
+  * `build_runner` for code generation.
+  * Regular tool updates and security patches.
+
+---
+
+### 24. **Exceptions & Deviations**
+
+* **Any exception to these rules requires:**
+  * Written justification with technical reasoning.
+  * Security team review (for security-related exceptions).
+  * Performance impact analysis.
+  * Documentation in code and ADR.
+  * Time-bound exemption with remediation plan.
+  * Regular review of all exceptions (monthly).
+  * Stakeholder approval for critical exceptions.
+
+---
+
+## **Summary**
+
+This comprehensive ruleset prioritizes security and privacy while maintaining high standards for code quality, performance, and user experience. Every decision should be evaluated against the core principle: protecting vulnerable users from adversaries.
+
+**Key takeaways:**
+- Security first, always - assume adversarial conditions
+- No hardcoded sizes; full responsiveness across all devices
+- Clean architecture with strict separation of concerns
+- Comprehensive testing including security and performance scenarios
+- Privacy by design and default
+- Performance matters - vulnerable users need reliability
+- Platform-specific considerations for iOS and Android
+- Proper app lifecycle and background processing handling
+- Comprehensive documentation and monitoring
+- Incident response planning and crisis management
+
+**Remember:** The users of this app are trusting it with their lives. Every line of code, every architectural decision, and every security measure matters. There are no acceptable compromises when it comes to user safety.
+
+---
+
+**END OF RULESET**
+
+Last Updated: December 20, 2024  
+Version: 2.1
+
+

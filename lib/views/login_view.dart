@@ -1,325 +1,223 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../view_models/login_view_model.dart';
-import '../Utils/colors.dart';
-import '../Utils/typography.dart';
+import '../view_models/auth_view_model.dart';
 import '../widgets/pin_input.dart';
 import 'register/register_view.dart';
-import 'main_page_view.dart';
 
 class LoginView extends StatelessWidget {
   const LoginView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Consumer<LoginViewModel>(
-        builder: (context, viewModel, child) {
-          if (viewModel.isInitializing) {
-            return const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.primary,
-              ),
-            );
-          }
-
-          return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 60),
-                  
-                  // Welcome message
-                  Selector<LoginViewModel, bool>(
-                    selector: (context, vm) => vm.isReturningUser,
-                    builder: (context, isReturningUser, child) {
-                      return Column(
-                        children: [
-                          Text(
-                            isReturningUser 
-                                ? 'Welcome back!'
-                                : 'Welcome to CherubGyre',
-                            style: AppTypography.headline1.copyWith(
-                              color: AppColors.textPrimary,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          
-                          const SizedBox(height: 8),
-                          
-                          Text(
-                            isReturningUser
-                                ? 'Enter your PIN to continue'
-                                : 'Sign in to your account',
-                            style: AppTypography.body1.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  
-                  const SizedBox(height: 60),
-                  
-                  // Username field (hidden for returning users)
-                  Selector<LoginViewModel, bool>(
-                    selector: (context, vm) => vm.isReturningUser,
-                    builder: (context, isReturningUser, child) {
-                      if (isReturningUser) return const SizedBox.shrink();
-                      
-                      return Column(
-                        children: [
-                          _UsernameField(),
-                          const SizedBox(height: 24),
-                        ],
-                      );
-                    },
-                  ),
-                  
-                  // PIN field
-                  _PinField(),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Error message
-                  Selector<LoginViewModel, String?>(
-                    selector: (context, vm) => vm.error,
-                    builder: (context, error, child) {
-                      if (error == null) return const SizedBox.shrink();
-                      
-                      return Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.error.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: AppColors.error.withOpacity(0.3),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.error_outline,
-                                  color: AppColors.error,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    error,
-                                    style: AppTypography.body2.copyWith(
-                                      color: AppColors.error,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-                      );
-                    },
-                  ),
-                  
-                  // Login button
-                  Selector<LoginViewModel, bool>(
-                    selector: (context, vm) => vm.isLoading,
-                    builder: (context, isLoading, child) {
-                      return ElevatedButton(
-                        onPressed: isLoading ? null : () => _handleLogin(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: AppColors.onPrimary,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  color: AppColors.onPrimary,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(
-                                'Sign In',
-                                style: AppTypography.button.copyWith(
-                                  color: AppColors.onPrimary,
-                                ),
-                              ),
-                      );
-                    },
-                  ),
-                  
-                  const Spacer(),
-                  
-                  // Register link
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Don't have an account? ",
-                        style: AppTypography.body2.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const RegisterView(),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          'Register',
-                          style: AppTypography.body2.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  // Clear saved user option (for returning users)
-                  Selector<LoginViewModel, bool>(
-                    selector: (context, vm) => vm.isReturningUser,
-                    builder: (context, isReturningUser, child) {
-                      if (!isReturningUser) return const SizedBox.shrink();
-                      
-                      return Column(
-                        children: [
-                          const SizedBox(height: 16),
-                          TextButton(
-                            onPressed: () {
-                              context.read<LoginViewModel>().clearSavedUser();
-                            },
-                            child: Text(
-                              'Sign in with different account',
-                              style: AppTypography.body2.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+    // Local LoginViewModel - disposed when widget is removed
+    return ChangeNotifierProvider(
+      create: (_) => LoginViewModel(),
+      child: const _LoginViewContent(),
     );
   }
+}
 
-  Future<void> _handleLogin(BuildContext context) async {
+class _LoginViewContent extends StatefulWidget {
+  const _LoginViewContent();
+
+  @override
+  State<_LoginViewContent> createState() => _LoginViewContentState();
+}
+
+class _LoginViewContentState extends State<_LoginViewContent> {
+  final GlobalKey<_PinFieldState> _pinFieldKey = GlobalKey<_PinFieldState>();
+
+  Future<void> _handleLogin() async {
+    debugPrint('🎯 _handleLogin() called from _LoginViewContentState');
+    
+    final pinFieldState = _pinFieldKey.currentState;
+    if (pinFieldState == null) {
+      debugPrint('❌ PIN field state is null!');
+      return;
+    }
+
     final viewModel = context.read<LoginViewModel>();
-    final success = await viewModel.login();
-    if (success && context.mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const MainPageView(),
+    final authState = context.read<AuthViewModel>();
+    
+    final pin = pinFieldState.pinValue;
+    debugPrint('📝 PIN from field: ${pin.length} characters');
+    
+    debugPrint('🔄 Calling viewModel.login()...');
+    final success = await viewModel.login(pin);
+    debugPrint('🔄 viewModel.login() returned: $success');
+    
+    if (success && mounted) {
+      debugPrint('✅ Login successful, showing success snackbar');
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Login successful!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
         ),
       );
+      
+      // Update global auth state
+      authState.setAuthenticated(true);
+      
+      // Clear the PIN controller
+      pinFieldState.controller.clear();
+      debugPrint('✅ Auth state updated, PIN controller cleared');
+    } else if (mounted && viewModel.error != null) {
+      debugPrint('❌ Login failed, showing error snackbar: ${viewModel.error}');
+      // Show error message as snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(viewModel.error!),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Dismiss',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
+        ),
+      );
+    } else {
+      debugPrint('⚠️ Login failed but no error message available');
     }
-  }
-}
-
-class _UsernameField extends StatefulWidget {
-  @override
-  State<_UsernameField> createState() => _UsernameFieldState();
-}
-
-class _UsernameFieldState extends State<_UsernameField> {
-  final _controller = TextEditingController();
-  final _focusNode = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final viewModel = context.read<LoginViewModel>();
-      _controller.text = viewModel.username;
-      _focusNode.requestFocus();
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _focusNode.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<LoginViewModel>(
-      builder: (context, viewModel, child) {
-        return TextField(
-          controller: _controller,
-          focusNode: _focusNode,
-          style: AppTypography.body1.copyWith(
-            color: AppColors.textPrimary,
-          ),
-          decoration: InputDecoration(
-            labelText: 'Username',
-            labelStyle: AppTypography.body2.copyWith(
-              color: AppColors.textSecondary,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: AppColors.border,
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final screenHeight = mediaQuery.size.height;
+    final padding = screenWidth * 0.05;
+
+    return Scaffold(
+      body: SafeArea(
+        child: Consumer<LoginViewModel>(
+          builder: (context, viewModel, child) {
+            if (viewModel.isInitializing) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            return SingleChildScrollView(
+              padding: EdgeInsets.all(padding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(height: screenHeight * 0.1),
+                  
+                  // Logo/Title
+                  Text(
+                    'CherubGyre',
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.08,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  
+                  SizedBox(height: screenHeight * 0.05),
+                  
+                  // Welcome message
+                  Text(
+                    viewModel.isReturningUser 
+                        ? 'Welcome back, ${viewModel.username}!'
+                        : 'Login to your account',
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.045,
+                      color: Colors.grey[700],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  
+                  SizedBox(height: screenHeight * 0.05),
+                  
+                  // Username field (only if not returning user)
+                  if (!viewModel.isReturningUser) ...[
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: 'Username',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.person),
+                      ),
+                      onChanged: viewModel.setUsername,
+                      textInputAction: TextInputAction.next,
+                    ),
+                    SizedBox(height: screenHeight * 0.02),
+                  ],
+                  
+                  // PIN field
+                  _PinField(
+                    key: _pinFieldKey,
+                    onLoginPressed: _handleLogin,
+                  ),
+                  
+                  // Error message
+                  if (viewModel.error != null) ...[
+                    SizedBox(height: screenHeight * 0.02),
+                    Container(
+                      padding: EdgeInsets.all(padding * 0.5),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        viewModel.error!,
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: screenWidth * 0.035,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                  
+                  SizedBox(height: screenHeight * 0.03),
+                  
+                  // Login button
+                  _LoginButton(onPressed: _handleLogin),
+                  
+                  SizedBox(height: screenHeight * 0.02),
+                  
+                  // Switch user / Register
+                  if (viewModel.isReturningUser) ...[
+                    TextButton(
+                      onPressed: viewModel.clearSavedUser,
+                      child: const Text('Not you? Switch user'),
+                    ),
+                  ] else ...[
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RegisterView(),
+                          ),
+                        );
+                      },
+                      child: const Text('New user? Register here'),
+                    ),
+                  ],
+                ],
               ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: AppColors.border,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: AppColors.primary,
-                width: 2,
-              ),
-            ),
-            filled: true,
-            fillColor: AppColors.surface,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
-            ),
-          ),
-          onChanged: viewModel.setUsername,
-          textInputAction: TextInputAction.next,
-          onSubmitted: (_) {
-            // Focus will be handled by PIN field
+            );
           },
-        );
-      },
+        ),
+      ),
     );
   }
 }
 
+// Simple PIN input field with local state
 class _PinField extends StatefulWidget {
+  final Future<void> Function() onLoginPressed;
+  
+  const _PinField({super.key, required this.onLoginPressed});
+
   @override
   State<_PinField> createState() => _PinFieldState();
 }
@@ -331,6 +229,7 @@ class _PinFieldState extends State<_PinField> {
   @override
   void initState() {
     super.initState();
+    // Auto-focus PIN field for returning users
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final viewModel = context.read<LoginViewModel>();
       if (viewModel.isReturningUser) {
@@ -346,37 +245,67 @@ class _PinFieldState extends State<_PinField> {
     super.dispose();
   }
 
+  TextEditingController get controller => _controller;
+
+  String get pinValue => _controller.text;
+
   @override
   Widget build(BuildContext context) {
     return Consumer<LoginViewModel>(
       builder: (context, viewModel, child) {
         return PinInput(
+          label: 'PIN',
           controller: _controller,
           focusNode: _focusNode,
           isVisible: viewModel.isPinVisible,
-          onChanged: viewModel.setPin,
           onToggleVisibility: viewModel.togglePinVisibility,
-          onSubmitted: (_) {
-            final loginView = context.findAncestorWidgetOfExactType<LoginView>();
-            if (loginView != null) {
-              _handleLogin(context);
-            }
-          },
+          onSubmitted: (_) => widget.onLoginPressed(),
         );
       },
     );
   }
+}
 
-  Future<void> _handleLogin(BuildContext context) async {
-    final viewModel = context.read<LoginViewModel>();
-    final success = await viewModel.login();
-    if (success && context.mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const MainPageView(),
-        ),
-      );
-    }
+// Simple login button
+class _LoginButton extends StatelessWidget {
+  final Future<void> Function() onPressed;
+  
+  const _LoginButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    return Consumer<LoginViewModel>(
+      builder: (context, viewModel, child) {
+        return SizedBox(
+          height: screenHeight * 0.06,
+          child: ElevatedButton(
+            onPressed: viewModel.isLoading 
+                ? null 
+                : () async {
+                    debugPrint('🔘 Login button pressed!');
+                    debugPrint('📊 Current state - isLoading: ${viewModel.isLoading}, error: ${viewModel.error}');
+                    await onPressed();
+                  },
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: viewModel.isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text(
+                    'Login',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+          ),
+        );
+      },
+    );
   }
 } 

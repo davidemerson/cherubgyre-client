@@ -1,96 +1,88 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../view_models/register_view_model.dart';
-import '../../views/main_page_view.dart';
 import 'invite_code_step.dart';
 import 'pin_setup_step.dart';
 import 'duress_pin_step.dart';
+import 'registration_success_step.dart';
 
 class RegisterView extends StatelessWidget {
   const RegisterView({super.key});
 
-  void _navigateToMain(BuildContext context) {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainPageView()),
+  @override
+  Widget build(BuildContext context) {
+    // Local RegisterViewModel - disposed when widget is removed
+    return ChangeNotifierProvider(
+      create: (_) => RegisterViewModel(),
+      child: const _RegisterViewContent(),
     );
   }
+}
+
+class _RegisterViewContent extends StatelessWidget {
+  const _RegisterViewContent();
 
   @override
   Widget build(BuildContext context) {
-    final mediaQueryWidth = MediaQuery.of(context).size.width;
-    final mediaQueryHeight = MediaQuery.of(context).size.height;
-    final textScaler = MediaQuery.of(context).textScaler;
-
-    return ChangeNotifierProvider(
-      create: (_) => RegisterViewModel(),
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'Register',
-            style: TextStyle(
-              fontSize: textScaler.scale(mediaQueryWidth * 0.06),
-            ),
-          ),
-          backgroundColor: Colors.deepPurple,
-          foregroundColor: Colors.white,
-        ),
-        body: SafeArea(
-          child: Consumer<RegisterViewModel>(
-            builder: (context, viewModel, _) {
-              // Handle successful registration
-              if (viewModel.userData != null) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _navigateToMain(context);
-                });
-              }
-
-              return Column(
-                children: [
-                  // Progress indicator
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Register'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      ),
+      body: SafeArea(
+        child: Consumer<RegisterViewModel>(
+          builder: (context, viewModel, child) {
+            return Column(
+              children: [
+                // Progress indicator
+                LinearProgressIndicator(
+                  value: (viewModel.step + 1) / 4,
+                  backgroundColor: Colors.grey[300],
+                ),
+                
+                // Step content
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24.0),
+                    child: _buildCurrentStep(viewModel),
+                  ),
+                ),
+                
+                // Error message
+                if (viewModel.error != null)
                   Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(mediaQueryWidth * 0.04),
-                    child: Row(
-                      children: [
-                        for (int i = 0; i < 3; i++)
-                          Expanded(
-                            child: Container(
-                              height: mediaQueryHeight * 0.01,
-                              margin: EdgeInsets.symmetric(horizontal: mediaQueryWidth * 0.01),
-                              decoration: BoxDecoration(
-                                color: i <= viewModel.step 
-                                    ? Colors.deepPurple 
-                                    : Colors.grey[300],
-                                borderRadius: BorderRadius.circular(mediaQueryHeight * 0.005),
-                              ),
-                            ),
-                          ),
-                      ],
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      viewModel.error!,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                  
-                  // Step content
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.all(mediaQueryWidth * 0.05),
-                      child: Column(
-                        children: [
-                          if (viewModel.step == 0)
-                            const InviteCodeStep()
-                          else if (viewModel.step == 1)
-                            const PinSetupStep()
-                          else if (viewModel.step == 2)
-                            const DuressPinStep(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
+              ],
+            );
+          },
         ),
       ),
     );
+  }
+
+  Widget _buildCurrentStep(RegisterViewModel viewModel) {
+    switch (viewModel.step) {
+      case 0:
+        return const InviteCodeStep();
+      case 1:
+        return const PinSetupStep();
+      case 2:
+        return const DuressPinStep();
+      case 3:
+        return const RegistrationSuccessStep();
+      default:
+        return const InviteCodeStep();
+    }
   }
 } 

@@ -1,5 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api_client.dart';
+import '../core/constants/api_constants.dart';
 
 class RegisterService {
   final ApiClient _apiClient;
@@ -27,15 +28,20 @@ class RegisterService {
         duressPin: duressPin,
       );
 
-      if (response['success'] == true) {
-        // Store authentication token and user data securely
-        await _storage.write(key: 'accessToken', value: response['token']);
+      if (response[ApiConstants.successKey] == true) {
+        // Store user data securely (no token in registration response)
         await _storage.write(key: 'normalPin', value: normalPin);
         await _storage.write(key: 'duressPin', value: duressPin);
         
-        return response['user'] ?? {};
+        // Store server-assigned username for future logins
+        final userData = response[ApiConstants.userKey] as Map<String, dynamic>?;
+        if (userData != null && userData[ApiConstants.usernameKey] != null) {
+          await _storage.write(key: 'username', value: userData[ApiConstants.usernameKey]);
+        }
+        
+        return userData ?? {};
       } else {
-        throw Exception(response['message'] ?? 'Registration failed');
+        throw Exception(response[ApiConstants.messageKey] ?? 'Registration failed');
       }
     } catch (e) {
       rethrow;

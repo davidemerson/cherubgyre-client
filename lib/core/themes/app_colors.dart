@@ -23,6 +23,18 @@ class AppColors {
   static const Color textOnPrimary = Color(0xFFFFFFFF);
   static const Color textOnSecondary = Color(0xFFFFFFFF);
   
+  // On Colors (for contrast)
+  static const Color onPrimary = Color(0xFFFFFFFF);
+  static const Color onSecondary = Color(0xFFFFFFFF);
+  static const Color onSurface = Color(0xFF212121);
+  static const Color onBackground = Color(0xFF212121);
+  static const Color onSuccess = Color(0xFFFFFFFF);
+  static const Color onError = Color(0xFFFFFFFF);
+  
+  // Border Colors
+  static const Color border = Color(0xFFE0E0E0);
+  static const Color borderFocused = Color(0xFF673AB7);
+  
   // Status Colors
   static const Color success = Color(0xFF4CAF50);
   static const Color warning = Color(0xFFFF9800);
