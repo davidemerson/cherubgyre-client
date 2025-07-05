@@ -6,15 +6,81 @@ import '../core/utils/environment_config.dart';
 import '../core/utils/session_manager.dart';
 
 class ApiClient {
-  static final ApiClient _instance = ApiClient._internal();
-  late final Dio _dio;
+  static ApiClient? _instance;
+  static Dio? _dio;
+  static bool _isInitializing = false;
 
   factory ApiClient() {
-    return _instance;
+    _instance ??= ApiClient._internal();
+    return _instance!;
   }
 
-  ApiClient._internal() {
-    final baseUrl = EnvironmentConfig.apiBaseUrl;
+  ApiClient._internal();
+
+  Dio get dio {
+    if (_dio == null) {
+      throw StateError('API Client not initialized. Call initialize() first.');
+    }
+    return _dio!;
+  }
+
+  /// Initialize the API client
+  static Future<void> initialize() async {
+    if (_isInitializing) return;
+    _isInitializing = true;
+    
+    try {
+      final baseUrl = await EnvironmentConfig.selectedServerUrl;
+      debugPrint('API Client initialized with base URL: $baseUrl');
+      
+      _dio = Dio(
+        BaseOptions(
+          baseUrl: baseUrl,
+          connectTimeout: ApiConstants.connectTimeout,
+          receiveTimeout: ApiConstants.receiveTimeout,
+          sendTimeout: ApiConstants.sendTimeout,
+          headers: ApiConstants.defaultHeaders,
+        ),
+      );
+
+      // Add interceptors (verbose logging only in debug mode)
+      if (kDebugMode) {
+        _dio!.interceptors.add(LogInterceptor(
+          requestBody: true,
+          responseBody: true,
+          logPrint: (obj) => debugPrint(obj.toString()),
+        ));
+      }
+
+      // Add authentication interceptor
+      _dio!.interceptors.add(InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          // Add authentication token for authenticated requests
+          if (!options.path.contains('/login') && 
+              !options.path.contains('/register') && 
+              !options.path.contains('/verify-invite')) {
+            final token = await SessionManager.getToken();
+            if (token != null) {
+              options.headers['Authorization'] = 'Bearer $token';
+            }
+          }
+          handler.next(options);
+        },
+        onError: (error, handler) async {
+          // Handle authentication errors
+          if (error.response?.statusCode == 401) {
+            await SessionManager.clearSession();
+          }
+          handler.next(error);
+        },
+      ));
+    } finally {
+      _isInitializing = false;
+    }
+  }
+
+  Future<void> _initializeDio() async {
+    final baseUrl = await EnvironmentConfig.selectedServerUrl;
     debugPrint('API Client initialized with base URL: $baseUrl');
     
     _dio = Dio(
@@ -29,7 +95,7 @@ class ApiClient {
 
     // Add interceptors (verbose logging only in debug mode)
     if (kDebugMode) {
-      _dio.interceptors.add(LogInterceptor(
+      _dio?.interceptors.add(LogInterceptor(
         requestBody: true,
         responseBody: true,
         logPrint: (obj) => debugPrint(obj.toString()),
@@ -37,12 +103,12 @@ class ApiClient {
     }
 
     // Add authentication interceptor
-    _dio.interceptors.add(InterceptorsWrapper(
+    _dio?.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
         // Add authentication token for authenticated requests
         if (!options.path.contains('/login') && 
             !options.path.contains('/register') && 
-            !options.path.contains('/verify-invite')) {
+            !options.path.contains('/validate-invite')) {
           final token = await SessionManager.getToken();
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
@@ -58,6 +124,13 @@ class ApiClient {
         handler.next(error);
       },
     ));
+  }
+
+  /// Reinitialize the API client with a new server URL
+  static Future<void> reinitializeWithNewServer() async {
+    EnvironmentConfig.clearCachedServerUrl();
+    _dio = null;
+    await initialize();
   }
 
   /// Central place to validate HTTP status and decode body.
@@ -82,7 +155,7 @@ class ApiClient {
   // Override thin HTTP helpers to always run through _processResponse.
   Future<dynamic> get(String path, {Map<String, dynamic>? queryParameters}) async {
     try {
-      final response = await _dio.get(path, queryParameters: queryParameters);
+      final response = await dio.get(path, queryParameters: queryParameters);
       return _processResponse(response);
     } on DioException catch (e) {
       // Extract the error message and throw as Exception
@@ -93,7 +166,9 @@ class ApiClient {
 
   Future<dynamic> post(String path, {dynamic data}) async {
     try {
-      final response = await _dio.post(path, data: data);
+      final fullUrl = '${dio.options.baseUrl}$path';
+      debugPrint('🌐 Full URL: $fullUrl');
+      final response = await dio.post(path, data: data);
       return _processResponse(response);
     } on DioException catch (e) {
       // Extract the error message and throw as Exception
@@ -264,16 +339,20 @@ class ApiClient {
     }
   }
 
-  // Verify invite code method
+  // Validate invite code method
   Future<bool> verifyInviteCode(String inviteCode) async {
     try {
-      final response = await post(ApiConstants.verifyInviteEndpoint, data: {
-        'inviteCode': inviteCode,
+      debugPrint('🌐 Making invite validation request to: ${ApiConstants.validateInviteEndpoint}');
+      debugPrint('📤 Request data: {invite_code: "$inviteCode"}');
+      
+      final response = await post(ApiConstants.validateInviteEndpoint, data: {
+        'invite_code': inviteCode,
       });
       final data = _ensureJsonMap(response);
+      debugPrint('✅ Invite validation response: $data');
       return data[ApiConstants.validKey] == true;
     } catch (e) {
-      debugPrint('Invite code verification failed: $e');
+      debugPrint('❌ Invite code validation failed: $e');
       return false;
     }
   }
@@ -285,6 +364,9 @@ class ApiClient {
     required String duressPin,
   }) async {
     try {
+      debugPrint('🌐 Making register request to: ${ApiConstants.registerEndpoint}');
+      debugPrint('📤 Request data: {invite_code: "$inviteCode", normal_pin: "${normalPin.length} chars", duress_pin: "${duressPin.length} chars"}');
+      
       final response = await post(ApiConstants.registerEndpoint, data: {
         ApiConstants.inviteCodeKey: inviteCode,
         ApiConstants.normalPinKey: normalPin,
@@ -292,13 +374,18 @@ class ApiClient {
       });
       
       final responseData = _ensureJsonMap(response);
+      debugPrint('📥 Parsed registration response: $responseData');
+      
+      // Extract user data from the nested 'user' object
+      final userData = responseData['user'] as Map<String, dynamic>?;
+      debugPrint('📥 Extracted user data: $userData');
       
       // Store user data securely if registration includes authentication
       if (responseData[ApiConstants.tokenKey] != null) {
         await SessionManager.storeToken(responseData[ApiConstants.tokenKey]);
         await SessionManager.storeUserData({
-          'username': responseData[ApiConstants.usernameKey],
-          'avatar': responseData[ApiConstants.avatarKey],
+          'username': userData?[ApiConstants.usernameKey],
+          'avatar': userData?[ApiConstants.avatarKey],
         });
         await SessionManager.storeLastLogin();
       }
@@ -306,9 +393,9 @@ class ApiClient {
       return {
         ApiConstants.successKey: true,
         ApiConstants.userKey: {
-          ApiConstants.idKey: responseData[ApiConstants.idKey],
-          ApiConstants.usernameKey: responseData[ApiConstants.usernameKey],
-          ApiConstants.avatarKey: responseData[ApiConstants.avatarKey],
+          ApiConstants.idKey: userData?[ApiConstants.idKey],
+          ApiConstants.usernameKey: userData?[ApiConstants.usernameKey],
+          ApiConstants.avatarKey: userData?[ApiConstants.avatarKey],
         },
       };
     } catch (e) {

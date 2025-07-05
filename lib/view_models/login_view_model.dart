@@ -68,7 +68,7 @@ class LoginViewModel extends ChangeNotifier {
       return 'PIN is required';
     }
     if (!SecurityUtils.isValidPinFormat(pin)) {
-      return 'PIN must be at least 4 digits';
+      return 'PIN must be at least 6 digits';
     }
     return null;
   }

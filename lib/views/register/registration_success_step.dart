@@ -110,37 +110,39 @@ class RegistrationSuccessStep extends StatelessWidget {
             
             SizedBox(height: screenHeight * 0.04),
             
-            // Complete button
-            SizedBox(
-              width: double.infinity,
-              height: screenHeight * 0.06,
-              child: ElevatedButton(
-                onPressed: viewModel.isLoading ? null : () => _handleComplete(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            // Complete button - only show if not already registered
+            if (viewModel.userData == null) ...[
+              SizedBox(
+                width: double.infinity,
+                height: screenHeight * 0.06,
+                child: ElevatedButton(
+                  onPressed: viewModel.isLoading ? null : () => _handleComplete(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
+                  child: viewModel.isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Complete Registration',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
-                child: viewModel.isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text(
-                        'Complete Registration',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
               ),
-            ),
+            ],
             
             // Show success info after registration
             if (viewModel.userData != null) ...[
@@ -186,23 +188,15 @@ class RegistrationSuccessStep extends StatelessWidget {
       return;
     }
 
-    // Note: In a real app, you would collect PINs here or pass them securely
-    // For this demo, we'll use placeholder values
-    // In production, implement a secure way to pass PINs between steps
-    
-    final success = await viewModel.register('1234', '5678');
+    // Register using the PINs stored in the view model
+    final success = await viewModel.register();
     
     if (success && context.mounted) {
       // Update auth state
       context.read<AuthViewModel>().setAuthenticated(true);
       
-      // Show success briefly then navigate
-      await Future.delayed(const Duration(seconds: 2));
-      
-      if (context.mounted) {
-        // Pop back to login/main screen
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
+      // Stay on this screen - the success info will be displayed
+      // No navigation needed
     }
   }
 } 

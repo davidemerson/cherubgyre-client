@@ -1,10 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Secure environment configuration utility
 class EnvironmentConfig {
   // Private constructor to prevent instantiation
   EnvironmentConfig._();
+
+  static const _storage = FlutterSecureStorage();
+  static String? _cachedServerUrl;
 
   /// Initialize environment configuration
   static Future<void> initialize() async {
@@ -18,6 +22,32 @@ class EnvironmentConfig {
   /// Get API base URL with fallback
   static String get apiBaseUrl {
     return dotenv.env['API_BASE_URL'] ?? 'https://cherubgyre-dev-53de84d03c61.herokuapp.com';
+  }
+
+  /// Get the currently selected server URL (public or private)
+  static Future<String> get selectedServerUrl async {
+    if (_cachedServerUrl != null) {
+      return _cachedServerUrl!;
+    }
+
+    try {
+      final savedUrl = await _storage.read(key: 'selected_server_url');
+      if (savedUrl != null && savedUrl.isNotEmpty) {
+        _cachedServerUrl = savedUrl;
+        return savedUrl;
+      }
+    } catch (e) {
+      debugPrint('Error reading saved server URL: $e');
+    }
+
+    // Fallback to default public server
+    _cachedServerUrl = apiBaseUrl;
+    return _cachedServerUrl!;
+  }
+
+  /// Clear cached server URL (call when server selection changes)
+  static void clearCachedServerUrl() {
+    _cachedServerUrl = null;
   }
 
   /// Get environment name

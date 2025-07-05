@@ -29,7 +29,7 @@ class InviteCodeStep extends StatelessWidget {
           ),
           SizedBox(height: mediaQueryHeight * 0.02),
           Text(
-            'Please enter the alphanumeric invite code you received to create your account.',
+            'Please enter the invite code you received to create your account.',
             style: TextStyle(
               fontSize: mediaQueryWidth * 0.045,
               color: AppColors.textSecondary,
@@ -39,16 +39,14 @@ class InviteCodeStep extends StatelessWidget {
           SizedBox(height: mediaQueryHeight * 0.04),
           TextField(
             onChanged: viewModel.setInviteCode,
-            textCapitalization: TextCapitalization.characters,
             inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-              LengthLimitingTextInputFormatter(20),
-              UpperCaseTextFormatter(),
+              // Allow any characters - let server validate
+              LengthLimitingTextInputFormatter(100), // Generous limit for any format
             ],
             decoration: InputDecoration(
               errorText: viewModel.error,
-              hintText: 'Enter invite code (e.g., ABC123XYZ)',
-              helperText: 'Letters and numbers only, up to 20 characters',
+              hintText: 'Enter your invite code',
+              helperText: 'Enter the invite code you received',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(mediaQueryWidth * 0.02),
               ),
@@ -59,7 +57,7 @@ class InviteCodeStep extends StatelessWidget {
             ),
             style: TextStyle(
               fontSize: mediaQueryWidth * 0.045,
-              letterSpacing: 1.2,
+              letterSpacing: 0.5,
               fontFamily: 'monospace',
               color: AppColors.textPrimary,
             ),
@@ -111,16 +109,4 @@ class InviteCodeStep extends StatelessWidget {
   }
 }
 
-// Custom text formatter to convert input to uppercase
-class UpperCaseTextFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    return TextEditingValue(
-      text: newValue.text.toUpperCase(),
-      selection: newValue.selection,
-    );
-  }
-} 
+ 

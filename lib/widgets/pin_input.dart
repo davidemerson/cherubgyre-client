@@ -35,9 +35,11 @@ class PinInput extends StatelessWidget {
           controller: controller,
           focusNode: focusNode,
           obscureText: !isVisible,
-          keyboardType: TextInputType.number,
+          keyboardType: TextInputType.text,
+          textCapitalization: TextCapitalization.characters,
           inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
+            // Allow only alphanumeric characters (letters and numbers)
+            FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
             LengthLimitingTextInputFormatter(6),
           ],
           onChanged: (value) {

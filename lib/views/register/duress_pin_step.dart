@@ -48,7 +48,7 @@ class _DuressPinStepState extends State<DuressPinStep> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Create a different 4-6 digit PIN for emergency situations.',
+              'Create a different 6-character PIN (letters and numbers) for emergency situations.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
@@ -101,15 +101,17 @@ class _DuressPinStepState extends State<DuressPinStep> {
     final viewModel = context.read<RegisterViewModel>();
     final duressPin = _duressPinController.text;
     final confirmPin = _confirmDuressPinController.text;
-    // We need to get the normal PIN from the previous step
-    // For now, we'll pass empty string and handle validation in the final step
-    final duressError = viewModel.validateDuressPin(duressPin, confirmPin, '');
+    
+    // Validate duress PIN (compare against the stored normal PIN)
+    final duressError = viewModel.validateDuressPin(duressPin, confirmPin, viewModel.normalPin ?? '');
     
     if (duressError != null) {
       viewModel.setError(duressError);
       return;
     }
 
+    viewModel.setError(null);
+    viewModel.setDuressPin(duressPin);
     viewModel.nextStep();
   }
 } 

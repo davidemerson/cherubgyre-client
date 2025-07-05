@@ -57,7 +57,7 @@ class _PinSetupStepState extends State<PinSetupStep> {
             SizedBox(height: screenHeight * 0.02),
             
             Text(
-              'Create a 4-6 digit PIN for secure access',
+              'Create a 6-character PIN using letters and numbers',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: screenWidth * 0.04,
@@ -140,6 +140,7 @@ class _PinSetupStepState extends State<PinSetupStep> {
     
     // Clear error and proceed
     viewModel.setError(null);
+    viewModel.setNormalPin(normalPin);
     viewModel.nextStep();
     
     // Note: PINs will be collected again in the final registration step

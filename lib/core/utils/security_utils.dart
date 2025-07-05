@@ -49,9 +49,9 @@ class SecurityUtils {
     }
   }
 
-  /// Validate PIN format (numbers only, 4-6 digits)
+  /// Validate PIN format (6 alphanumeric characters - letters and numbers)
   static bool isValidPinFormat(String pin) {
-    return RegExp(r'^[0-9]{4,6}$').hasMatch(pin);
+    return RegExp(r'^[a-zA-Z0-9]{6}$').hasMatch(pin);
   }
 
   /// Generate a secure random PIN for testing (if needed)
