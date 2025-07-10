@@ -10,6 +10,7 @@ class ApiConstants {
   static const String loginEndpoint = '/login';
   static const String registerEndpoint = '/register';
   static const String validateInviteEndpoint = '/validate-invite';
+  static const String profileEndpoint = '/profile';
   
   // Response keys
   static const String successKey = 'success';

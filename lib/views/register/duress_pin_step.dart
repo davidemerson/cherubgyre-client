@@ -35,27 +35,30 @@ class _DuressPinStepState extends State<DuressPinStep> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Consumer<RegisterViewModel>(
       builder: (context, viewModel, child) {
         return Column(
           children: [
-            const Text(
+            Text(
               'Set Duress PIN',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: screenWidth * 0.06,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
-            const Text(
+            SizedBox(height: screenHeight * 0.02),
+            Text(
               'Create a different 6-character PIN (letters and numbers) for emergency situations.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
+                fontSize: screenWidth * 0.04,
+                color: Colors.grey[600],
               ),
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: screenHeight * 0.04),
             PinInput(
               label: 'Duress PIN',
               controller: _duressPinController,
@@ -68,7 +71,7 @@ class _DuressPinStepState extends State<DuressPinStep> {
                 _confirmDuressPinFocusNode.requestFocus();
               },
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: screenHeight * 0.02),
             PinInput(
               label: 'Confirm Duress PIN',
               controller: _confirmDuressPinController,
@@ -81,15 +84,108 @@ class _DuressPinStepState extends State<DuressPinStep> {
                 _handleNext();
               },
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: screenHeight * 0.04),
+            
+            // Privacy Policy checkbox
+            Container(
+              padding: EdgeInsets.all(screenWidth * 0.04),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Checkbox(
+                    value: viewModel.acceptedPrivacyPolicy,
+                    onChanged: (value) {
+                      viewModel.setPrivacyPolicyAccepted(value ?? false);
+                    },
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'I agree to the',
+                          style: TextStyle(fontSize: screenWidth * 0.035),
+                        ),
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                // TODO: Show privacy policy
+                              },
+                              child: Text(
+                                'Privacy Policy',
+                                style: TextStyle(
+                                  fontSize: screenWidth * 0.035,
+                                  color: Colors.blue,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                            Text(' and ', style: TextStyle(fontSize: screenWidth * 0.035)),
+                            GestureDetector(
+                              onTap: () {
+                                // TODO: Show terms
+                              },
+                              child: Text(
+                                'Terms & Conditions',
+                                style: TextStyle(
+                                  fontSize: screenWidth * 0.035,
+                                  color: Colors.blue,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            SizedBox(height: screenHeight * 0.04),
             SizedBox(
               width: double.infinity,
+              height: screenHeight * 0.06,
               child: ElevatedButton(
                 onPressed: viewModel.isLoading ? null : _handleNext,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 child: viewModel.isLoading
-                    ? const CircularProgressIndicator()
-                    : const Text('Next'),
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        'Complete Registration',
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.045,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
               ),
+            ),
+            SizedBox(height: screenHeight * 0.02),
+            TextButton(
+              onPressed: () {
+                context.read<RegisterViewModel>().prevStep();
+              },
+              child: const Text('Back'),
             ),
           ],
         );
@@ -97,7 +193,7 @@ class _DuressPinStepState extends State<DuressPinStep> {
     );
   }
 
-  void _handleNext() {
+  void _handleNext() async {
     final viewModel = context.read<RegisterViewModel>();
     final duressPin = _duressPinController.text;
     final confirmPin = _confirmDuressPinController.text;
@@ -110,8 +206,22 @@ class _DuressPinStepState extends State<DuressPinStep> {
       return;
     }
 
+    // Validate privacy policy
+    final privacyError = viewModel.validatePrivacyPolicy();
+    if (privacyError != null) {
+      viewModel.setError(privacyError);
+      return;
+    }
+
     viewModel.setError(null);
     viewModel.setDuressPin(duressPin);
-    viewModel.nextStep();
+    
+    // Perform registration
+    final success = await viewModel.register();
+    
+    if (success && mounted) {
+      // Navigate to success step
+      viewModel.nextStep();
+    }
   }
 } 

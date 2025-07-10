@@ -4,6 +4,8 @@ import '../view_models/login_view_model.dart';
 import '../view_models/auth_view_model.dart';
 import '../widgets/pin_input.dart';
 import 'register/register_view.dart';
+import 'duress/fake_screen_view.dart';
+import 'main_page_view.dart';
 
 class LoginView extends StatelessWidget {
   const LoginView({super.key});
@@ -44,19 +46,11 @@ class _LoginViewContentState extends State<_LoginViewContent> {
     debugPrint('📝 PIN from field: ${pin.length} characters');
     
     debugPrint('🔄 Calling viewModel.login()...');
-    final success = await viewModel.login(pin);
-    debugPrint('🔄 viewModel.login() returned: $success');
+    final result = await viewModel.login(pin);
+    debugPrint('🔄 viewModel.login() returned: $result');
     
-    if (success && mounted) {
-      debugPrint('✅ Login successful, showing success snackbar');
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login successful!'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
+    if (result['success'] == true && mounted) {
+      debugPrint('✅ Login successful, checking if duress: ${result['isDuress']}');
       
       // Update global auth state
       authState.setAuthenticated(true);
@@ -64,6 +58,29 @@ class _LoginViewContentState extends State<_LoginViewContent> {
       // Clear the PIN controller
       pinFieldState.controller.clear();
       debugPrint('✅ Auth state updated, PIN controller cleared');
+      
+      // Navigate based on duress status
+      if (result['isDuress'] == true) {
+        debugPrint('🚨 Duress login detected, navigating to fake screen');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const FakeScreenView()),
+        );
+      } else {
+        debugPrint('✅ Normal login, showing success and navigating to main page');
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login successful!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        
+        // Navigate to main page
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainPageView()),
+        );
+      }
     } else if (mounted && viewModel.error != null) {
       debugPrint('❌ Login failed, showing error snackbar: ${viewModel.error}');
       // Show error message as snackbar

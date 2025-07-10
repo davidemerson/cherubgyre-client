@@ -13,6 +13,7 @@ class LoginViewModel extends ChangeNotifier {
   String _username = '';
   bool _isPinVisible = false;
   bool _isReturningUser = false;
+  bool _isDuressLogin = false;
 
   LoginViewModel() 
     : _apiClient = ApiClient() {
@@ -25,6 +26,7 @@ class LoginViewModel extends ChangeNotifier {
   String get username => _username;
   bool get isPinVisible => _isPinVisible;
   bool get isReturningUser => _isReturningUser;
+  bool get isDuressLogin => _isDuressLogin;
 
   Future<void> _initializeUser() async {
     try {
@@ -73,7 +75,7 @@ class LoginViewModel extends ChangeNotifier {
     return null;
   }
 
-  Future<bool> login(String pin) async {
+  Future<Map<String, dynamic>> login(String pin) async {
     debugPrint('🔐 LoginViewModel.login() called with username: $_username, pin length: ${pin.length}');
     
     final usernameError = validateUsername();
@@ -83,7 +85,7 @@ class LoginViewModel extends ChangeNotifier {
       debugPrint('❌ Validation failed - usernameError: $usernameError, pinError: $pinError');
       _error = usernameError ?? pinError;
       notifyListeners();
-      return false;
+      return {'success': false, 'isDuress': false};
     }
 
     try {
@@ -99,7 +101,12 @@ class LoginViewModel extends ChangeNotifier {
       debugPrint('📡 API response received: $response');
       
       if (response[ApiConstants.successKey] == true) {
-        debugPrint('✅ Login successful, storing session data...');
+        debugPrint('✅ Login successful, checking if duress...');
+        
+        // Check if this is a duress login
+        _isDuressLogin = response['is_duress'] == true;
+        debugPrint('🚨 Is duress login: $_isDuressLogin');
+        
         // Store authentication data securely
         await SessionManager.storeToken(response[ApiConstants.tokenKey]);
         await SessionManager.storeUserData({'username': _username});
@@ -109,20 +116,20 @@ class LoginViewModel extends ChangeNotifier {
         SecurityUtils.secureClear(pin);
         debugPrint('✅ Session data stored, PIN cleared');
         
-        return true;
+        return {'success': true, 'isDuress': _isDuressLogin};
       } else {
         debugPrint('❌ Login failed: ${response[ApiConstants.messageKey]}');
         _error = response[ApiConstants.messageKey] ?? 'Login failed';
         // Securely clear the PIN from memory even on failure
         SecurityUtils.secureClear(pin);
-        return false;
+        return {'success': false, 'isDuress': false};
       }
     } catch (e) {
       debugPrint('💥 Login exception: $e');
       _error = 'Network error. Please try again.';
       // Securely clear the PIN from memory even on error
       SecurityUtils.secureClear(pin);
-      return false;
+      return {'success': false, 'isDuress': false};
     } finally {
       debugPrint('🔄 Setting loading state to false');
       _isLoading = false;

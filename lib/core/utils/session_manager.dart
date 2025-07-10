@@ -1,5 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:convert';
 
 /// Secure session manager for handling authentication tokens and user sessions
 class SessionManager {
@@ -39,8 +40,8 @@ class SessionManager {
       safeData['userId'] = userData['userId'];
     }
     
-    // Convert to JSON string for storage
-    final jsonString = _mapToJson(safeData);
+    // Convert to JSON string for storage using proper JSON serialization
+    final jsonString = jsonEncode(safeData);
     await _storage.write(key: 'userData', value: jsonString);
   }
 
@@ -48,7 +49,12 @@ class SessionManager {
   static Future<Map<String, dynamic>?> getUserData() async {
     final jsonString = await _storage.read(key: 'userData');
     if (jsonString != null) {
-      return _jsonToMap(jsonString);
+      try {
+        return jsonDecode(jsonString) as Map<String, dynamic>;
+      } catch (e) {
+        debugPrint('Error parsing user data JSON: $e');
+        return null;
+      }
     }
     return null;
   }
@@ -88,36 +94,5 @@ class SessionManager {
     final now = DateTime.now();
     final difference = now.difference(lastLogin);
     return difference > maxAge;
-  }
-
-  /// Helper method to convert Map to JSON string
-  static String _mapToJson(Map<String, dynamic> map) {
-    // Simple JSON conversion - in production, use proper JSON library
-    final entries = map.entries.map((e) => '"${e.key}":"${e.value}"').join(',');
-    return '{$entries}';
-  }
-
-  /// Helper method to convert JSON string to Map
-  static Map<String, dynamic> _jsonToMap(String json) {
-    try {
-      // Simple JSON parsing - in production, use proper JSON library
-      final cleanJson = json.replaceAll('{', '').replaceAll('}', '');
-      final entries = cleanJson.split(',');
-      final map = <String, dynamic>{};
-      
-      for (final entry in entries) {
-        final parts = entry.split(':');
-        if (parts.length == 2) {
-          final key = parts[0].replaceAll('"', '');
-          final value = parts[1].replaceAll('"', '');
-          map[key] = value;
-        }
-      }
-      
-      return map;
-    } catch (e) {
-      debugPrint('Error parsing user data JSON: $e');
-      return {};
-    }
   }
 } 

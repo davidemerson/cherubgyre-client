@@ -1,11 +1,67 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../view_models/register_view_model.dart';
 import '../../view_models/auth_view_model.dart';
+import '../main_page_view.dart';
+import '../login_view.dart';
 
-/// Final registration step - shows privacy policy and completes registration
+/// Final registration step - shows registration success with username and avatar
 class RegistrationSuccessStep extends StatelessWidget {
   const RegistrationSuccessStep({super.key});
+
+  bool _isSvgUrl(String url) {
+    return url.toLowerCase().contains('.svg') || url.contains('svg');
+  }
+
+  Widget _buildAvatarWidget(String avatarUrl, double size) {
+    if (_isSvgUrl(avatarUrl)) {
+      return SvgPicture.network(
+        avatarUrl,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        placeholderBuilder: (context) => Container(
+          width: size,
+          height: size,
+          color: Colors.grey[300],
+          child: Icon(
+            Icons.person,
+            size: size * 0.5,
+            color: Colors.grey[600],
+          ),
+        ),
+      );
+    } else {
+      return CachedNetworkImage(
+        imageUrl: avatarUrl,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        placeholder: (context, url) => Container(
+          width: size,
+          height: size,
+          color: Colors.grey[300],
+          child: Icon(
+            Icons.person,
+            size: size * 0.5,
+            color: Colors.grey[600],
+          ),
+        ),
+        errorWidget: (context, url, error) => Container(
+          width: size,
+          height: size,
+          color: Colors.grey[300],
+          child: Icon(
+            Icons.person,
+            size: size * 0.5,
+            color: Colors.grey[600],
+          ),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,6 +72,7 @@ class RegistrationSuccessStep extends StatelessWidget {
       builder: (context, viewModel, child) {
         return Column(
           children: [
+            // Success Icon
             Icon(
               Icons.check_circle,
               size: screenWidth * 0.2,
@@ -24,18 +81,21 @@ class RegistrationSuccessStep extends StatelessWidget {
             
             SizedBox(height: screenHeight * 0.03),
             
+            // Success Title
             Text(
-              'Almost Done!',
+              'Registration Successful!',
               style: TextStyle(
                 fontSize: screenWidth * 0.06,
                 fontWeight: FontWeight.bold,
+                color: Colors.green,
               ),
             ),
             
             SizedBox(height: screenHeight * 0.02),
             
+            // Success Message
             Text(
-              'Please review and accept our terms to complete registration',
+              'Your account has been created successfully',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: screenWidth * 0.04,
@@ -45,61 +105,132 @@ class RegistrationSuccessStep extends StatelessWidget {
             
             SizedBox(height: screenHeight * 0.04),
             
-            // Privacy Policy checkbox
+            // User Info Card
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(screenWidth * 0.05),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.green.withOpacity(0.3),
+                  width: 2,
+                ),
               ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Column(
                 children: [
-                  Checkbox(
-                    value: viewModel.acceptedPrivacyPolicy,
-                    onChanged: (value) {
-                      viewModel.setPrivacyPolicyAccepted(value ?? false);
-                    },
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'I agree to the',
-                          style: TextStyle(fontSize: 14),
+                  // Avatar and Username Section
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Avatar
+                      if (viewModel.assignedAvatar != null && viewModel.assignedAvatar!.isNotEmpty)
+                        Container(
+                          width: screenWidth * 0.2,
+                          height: screenWidth * 0.2,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.green.withOpacity(0.5),
+                              width: 3,
+                            ),
+                          ),
+                          child: _buildAvatarWidget(viewModel.assignedAvatar!, screenWidth * 0.2),
+                        )
+                      else
+                        Container(
+                          width: screenWidth * 0.2,
+                          height: screenWidth * 0.2,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.green.withOpacity(0.5),
+                              width: 3,
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.person,
+                            size: screenWidth * 0.1,
+                            color: Colors.grey[600],
+                          ),
                         ),
-                        Row(
+                      
+                      SizedBox(width: screenWidth * 0.04),
+                      
+                      // Username Section
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            GestureDetector(
-                              onTap: () {
-                                // TODO: Show privacy policy
-                              },
-                              child: const Text(
-                                'Privacy Policy',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.blue,
-                                  decoration: TextDecoration.underline,
-                                ),
+                            Text(
+                              'Your Username:',
+                              style: TextStyle(
+                                fontSize: screenWidth * 0.035,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const Text(' and ', style: TextStyle(fontSize: 14)),
-                            GestureDetector(
-                              onTap: () {
-                                // TODO: Show terms
-                              },
-                              child: const Text(
-                                'Terms & Conditions',
+                            SizedBox(height: screenHeight * 0.01),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth * 0.03,
+                                vertical: screenHeight * 0.01,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.green.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                viewModel.assignedUsername ?? "Unknown",
                                 style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.blue,
-                                  decoration: TextDecoration.underline,
+                                  fontSize: screenWidth * 0.045,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                  fontFamily: 'monospace',
                                 ),
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  SizedBox(height: screenHeight * 0.03),
+                  
+                  // Important Message
+                  Container(
+                    padding: EdgeInsets.all(screenWidth * 0.04),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.orange.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.orange[700],
+                          size: screenWidth * 0.05,
+                        ),
+                        SizedBox(width: screenWidth * 0.03),
+                        Expanded(
+                          child: Text(
+                            'Please save your username! You will need it to log in to your account.',
+                            style: TextStyle(
+                              fontSize: screenWidth * 0.035,
+                              color: Colors.orange[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -108,95 +239,65 @@ class RegistrationSuccessStep extends StatelessWidget {
               ),
             ),
             
-            SizedBox(height: screenHeight * 0.04),
+            SizedBox(height: screenHeight * 0.05),
             
-            // Complete button - only show if not already registered
-            if (viewModel.userData == null) ...[
-              SizedBox(
-                width: double.infinity,
-                height: screenHeight * 0.06,
-                child: ElevatedButton(
-                  onPressed: viewModel.isLoading ? null : () => _handleComplete(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+            // Login Button
+            SizedBox(
+              width: double.infinity,
+              height: screenHeight * 0.06,
+              child: ElevatedButton(
+                onPressed: () => _handleLogin(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: viewModel.isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'Complete Registration',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
+                  elevation: 2,
                 ),
-              ),
-            ],
-            
-            // Show success info after registration
-            if (viewModel.userData != null) ...[
-              SizedBox(height: screenHeight * 0.04),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
-                      'Registration Successful!',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
+                    Icon(
+                      Icons.login,
+                      color: Colors.white,
+                      size: screenWidth * 0.05,
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(width: screenWidth * 0.02),
                     Text(
-                      'Your username: ${viewModel.assignedUsername ?? ""}',
-                      style: const TextStyle(fontSize: 16),
+                      'Login to Your Account',
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.045,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
+            
+            SizedBox(height: screenHeight * 0.02),
+            
+            // Additional Info
+            Text(
+              'You can now use your username and PIN to log in anytime',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: screenWidth * 0.035,
+                color: Colors.grey[500],
+              ),
+            ),
           ],
         );
       },
     );
   }
 
-  Future<void> _handleComplete(BuildContext context) async {
-    final viewModel = context.read<RegisterViewModel>();
-    
-    // Validate privacy policy
-    final error = viewModel.validatePrivacyPolicy();
-    if (error != null) {
-      viewModel.setError(error);
-      return;
-    }
-
-    // Register using the PINs stored in the view model
-    final success = await viewModel.register();
-    
-    if (success && context.mounted) {
-      // Update auth state
-      context.read<AuthViewModel>().setAuthenticated(true);
-      
-      // Stay on this screen - the success info will be displayed
-      // No navigation needed
-    }
+  void _handleLogin(BuildContext context) {
+    // Navigate to login view and clear the navigation stack
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginView()),
+      (route) => false,
+    );
   }
 } 

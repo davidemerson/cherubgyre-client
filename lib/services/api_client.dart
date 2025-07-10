@@ -153,9 +153,9 @@ class ApiClient {
   }
 
   // Override thin HTTP helpers to always run through _processResponse.
-  Future<dynamic> get(String path, {Map<String, dynamic>? queryParameters}) async {
+  Future<dynamic> get(String path, {Map<String, dynamic>? queryParameters, Options? options}) async {
     try {
-      final response = await dio.get(path, queryParameters: queryParameters);
+      final response = await dio.get(path, queryParameters: queryParameters, options: options);
       return _processResponse(response);
     } on DioException catch (e) {
       // Extract the error message and throw as Exception
@@ -320,9 +320,19 @@ class ApiClient {
       // Store authentication data securely
       if (responseData[ApiConstants.tokenKey] != null) {
         await SessionManager.storeToken(responseData[ApiConstants.tokenKey]);
-        await SessionManager.storeUserData({'username': username});
+        
+        // Store user data including avatar if available
+        final userData = responseData[ApiConstants.userKey] as Map<String, dynamic>?;
+        final avatar = userData?[ApiConstants.avatarKey];
+        
+        await SessionManager.storeUserData({
+          'username': username,
+          'avatar': avatar,
+        });
         await SessionManager.storeLastLogin();
+        
         debugPrint('🔐 Session data stored successfully');
+        debugPrint('🔐 Stored username: $username, avatar: $avatar');
       }
       
       return {
@@ -332,6 +342,39 @@ class ApiClient {
       };
     } catch (e, st) {
       debugPrint('💥 Exception in login: $e\n$st');
+      return {
+        ApiConstants.successKey: false,
+        ApiConstants.messageKey: e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  // Login method without session storage (for registration auto-login)
+  Future<Map<String, dynamic>> loginWithoutSessionStorage({required String username, required String pin}) async {
+    try {
+      debugPrint('🌐 Making login request to: ${ApiConstants.loginEndpoint} (without session storage)');
+      debugPrint('📤 Request data: {username: "$username", pin: "$pin"}');
+      
+      final dynamic raw = await post(ApiConstants.loginEndpoint, data: {
+        'username': username,
+        'pin': pin,
+      });
+      
+      debugPrint('✅ Login request successful – parsing JSON');
+      final responseData = _ensureJsonMap(raw);
+      
+      debugPrint('📥 Parsed response JSON: $responseData');
+      
+      // Don't store session data - let caller handle it
+      debugPrint('🔐 Login successful but session storage skipped (will be handled by caller)');
+      
+      return {
+        ApiConstants.successKey: true,
+        ApiConstants.tokenKey: responseData[ApiConstants.tokenKey],
+        ApiConstants.userKey: responseData[ApiConstants.userKey],
+      };
+    } catch (e, st) {
+      debugPrint('💥 Exception in loginWithoutSessionStorage: $e\n$st');
       return {
         ApiConstants.successKey: false,
         ApiConstants.messageKey: e.toString().replaceAll('Exception: ', ''),
@@ -400,6 +443,34 @@ class ApiClient {
       };
     } catch (e) {
       debugPrint('💥 Exception in register: $e');
+      return {
+        ApiConstants.successKey: false,
+        ApiConstants.messageKey: e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  // Profile method
+  Future<Map<String, dynamic>> getProfile() async {
+    try {
+      debugPrint('🌐 Making profile request to: ${ApiConstants.profileEndpoint}');
+      
+      // The authentication interceptor will automatically add the Authorization header
+      final response = await get(ApiConstants.profileEndpoint);
+      final responseData = _ensureJsonMap(response);
+      
+      debugPrint('📥 Parsed profile response: $responseData');
+      
+      return {
+        ApiConstants.successKey: true,
+        ApiConstants.userKey: {
+          ApiConstants.idKey: responseData[ApiConstants.idKey],
+          ApiConstants.usernameKey: responseData[ApiConstants.usernameKey],
+          ApiConstants.avatarKey: responseData[ApiConstants.avatarKey],
+        },
+      };
+    } catch (e) {
+      debugPrint('💥 Exception in getProfile: $e');
       return {
         ApiConstants.successKey: false,
         ApiConstants.messageKey: e.toString().replaceAll('Exception: ', ''),
